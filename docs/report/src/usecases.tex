@@ -1,0 +1,36 @@
+% vim: set tw=78 sts=2 sw=2 ts=8 aw et ai:
+
+\subsection{Fat binary scenarios}
+
+The user might first want to find out if a binary file is fat (or universal)
+and then extract the code for a specific archtecture in order to obtain a
+standalone executable for a single architecture.
+
+\subsection{Entitlement scenarios}
+
+An attacker would try to craft a malicious executable which would be useless
+without an entitlement signature, therefore the attacker would need to insert
+a new signature to validate the malicious entitlement. This feature would
+enable the user to extract an entitlement signature from the binary in order
+to validate it.
+
+\subsection{Library cache scenarios}
+
+In order to gain more information about a given binary we could inspect the
+API calls to a dynamic library that the binary is to be dynamically linked
+with. Knowing what library function the binary calls might help us in finding
+security breaches.
+
+\subsection{Sandbox profile binary extraction scenarios}
+
+The sandbox profile binaries should be extracted in order to be further
+processed by SandBlaster to reverse the sandbox profiles. The end goal here is
+to escape the application sandbox
+
+\subsection{Dump syscall table scenarios}
+
+During binary file analysis we would identify what system calls the
+application makes. Because of the closed nature of the kernel we do not know
+what system calls are being made, so we need to extract the system call table
+in order to find this out. This way we can further investigate entry points
+into the kernel
