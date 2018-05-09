@@ -1,1 +1,18 @@
 % vim: set tw=78 sts=2 sw=2 ts=8 aw et ai:
+
+The binary track of the project yielded concrete progress on the anatomy of a
+binary file, especially in the case of Universal Binaries. As a visual
+representation, the following image is a very accurate diagram of the
+internals of a Fat Binary:
+
+% source: http://www.cocoadev.co.kr/87
+\begin{figure}[H]
+  \includegraphics[scale=0.6]{fatBinary.jpg}
+  \centering
+\end{figure}
+
+There is only one Fat Header (struct fat_header) and at least two Fat
+Architectures (struct fat_arch). Generally, the grouping of the Fat Header and
+Fat Architectures is called the 'Fat Header', even though that is not entirely
+accurate (given the fact that only the struct fat_header should is the
+'actual' Fat Header). Such confusion is very frequently encountered.
