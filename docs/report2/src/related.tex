@@ -1,0 +1,79 @@
+% vim: set tw=78 sts=2 sw=2 ts=8 aw et ai:
+\subsection{File}
+
+File \cite{file} is a standard Unix command which identifies the file type by looking for
+the magic number in a file header. Depending on the file type and environment
+other significant information might be displayed. This command is available on
+most Unix, and Unix-like operating systems.
+
+\subsection{Otool}
+
+Otool \cite{otool} is a static analysis tool which identifies file headers and sections
+displaying them in a readable manner. Support for universal headers is
+included in this tool. Universal headers (also called fat binaries), are found
+in files that encapsulate machine code for more than one architecture. Otool
+is available only on MacOS
+
+\subsection{Objdump}
+
+Objdump \cite{objdump} is similar to Otool, but it lacks support for fat binaries. This
+command is available on most Unix, and Unix-like operating systems.
+
+\subsection{Jtool}
+
+Jtool \cite{jtool} builds on the functionality of Otool and extends it even further by
+adding static binary analysis specific functionalities such as symbol
+injection and a better disassembler. This command is available on Linux,
+and OSX64 and iOS32/64 operating systems.
+
+\subsection{Joker}
+
+Joker \cite{joker} is an iOS kernelcache analysis tool used for reverse engineering various
+components. This tool is primarily designed for iOS, but it also works well
+with the XNU kernel, thanks to the fact that most of the data structures are
+identical. This command is available on Linux, and OSX64 and iOS32/64
+operating systems. 
+
+\subsection{Machlib}
+
+Machlib is the basis of both Jtool and Joker. The fact that it is closed
+source has driven us to design our own library with a more complete API.This
+command is available on Linux, and OSX64 and iOS32/64 operating systems.
+
+\subsection{Mach-O View}
+
+Mach-O View \cite{mach-o-view} is a GUI tool that parses the file header, groups its sections,
+and graphically displays a hexdump of each of them. This tool is only
+available on MacOS.
+
+\subsection{Sandbox_toolkit}
+
+Sandbox_toolkit \cite{sandbox-toolkit} is a collection of tools that deal with OS X and iOS sandbox
+profiles. It can extract sandbox operations, sandbox profiles, and manage the
+binary sandbox profiles. This is an open source toolkit that has become
+deprecated as of iOS 10.0. This tool is only available on MacOS, as it uses
+MacOS specific library calls.
+
+\subsection{SandBlaster}
+
+SandBlaster \cite{sandblaster} is a reversing tool that extract the Apple sandbox profiles from
+the raw output of the Sandbox_toolkit, by parsing these files. This tool is
+cross-platform, because it is written in Python, but it uses Sandbox_toolkit,
+which can be run only on MacOS. If you can provide the sandbox binary
+profiles, you can run this tool on other operating systems too.
+
+\subsection{iExtractor}
+
+iExtractor \cite{iextractor} is a bundle of tools and scripts that automate data extraction from
+iOS firmware files. It decripts, unpacks and structures the files in an
+onganized fashion. Seeing as this tool uses other MacOS specific tools, we
+can consider it to be a MacOS tool, but you can provide the necessary input
+data to the scripts, you could run it on other platform too.
+
+\subsection{Open-source-machlib}
+
+Our work is based on previous work \cite{open-source-machlib} done by Liviu
+Gheorghe and Alexandros Dimos, both of which started the Open-source-machlib
+project. This is an open source cross-platform API that parses both the
+header and the code of the file. It extracts the code signature and
+information about symbols, segments and sections.
