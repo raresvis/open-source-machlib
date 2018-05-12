@@ -28,3 +28,8 @@ architecture).
 
 The final API is yet to be defined, even though the current state of the
 project has a working fat header and far architecture header parser.
+
+For syscall table extraction, Open Source machlib extracts the memory
+addresses where the syscall is located by locating the signature that marks
+the begining of an array that sysent's. A sysent is a data structure that
+stands for an entry in the syscall table.

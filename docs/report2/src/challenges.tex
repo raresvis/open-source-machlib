@@ -2,4 +2,8 @@
 The main challenge of working on this project was that there is a low amount
 of documentation available about the format of a binary file. Adding to this
 is the fact that the number of system calls can grow from one kernel version
-to another.
+to another, and the signature marking the start of the table's location
+sometimes changes from one kernel version to another. Another challenge to
+syscall table extraction is the fact that for some versions of the kernel, the
+names of the system calls is also kept in the kernel cache, but on others they
+are not.
