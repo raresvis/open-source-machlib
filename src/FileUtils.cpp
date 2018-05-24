@@ -75,6 +75,11 @@ void FileUtils::setSwap()
         isSwap = true;
 }
 
+void FileUtils::clearSwap()
+{
+	isSwap = false;
+}
+
 uint32_t FileUtils::swapUint32(uint32_t value)
 {
         uint32_t Byte0 = value & 0x000000FF;

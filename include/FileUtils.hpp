@@ -21,6 +21,7 @@ public:
         static void readUint16(FILE *file, uint16_t * buff);
         static void readBytes(FILE *file, char * buff, int nr);
         static void setSwap();
+        static void clearSwap();
 };
 
 #endif
