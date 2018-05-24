@@ -3,8 +3,9 @@
 
 MachHeader::MachHeader(FILE *file)
 {
-        FileUtils::readUint32(file, &magic);
+        FileUtils::clearSwap();
 
+        FileUtils::readUint32(file, &magic);
         if(magic != MAGIC_32 && magic != MAGIC_64 &&
                 magic != CIGAM_32 && magic != CIGAM_64) {
                 throw std::runtime_error("File probably not MachO");
