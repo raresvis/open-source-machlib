@@ -84,3 +84,14 @@ uint32_t MachHeader::getReserved()
         //TODO - throws exception when not 32 bit
         return -1;
 }
+
+void MachHeader::print()
+{
+        printf("cputype: %x, cpusubtype: %x, filetype: %d, numberCmds: %u, "
+                "sizeOfCmds: %u, flags: %x",
+                this->cpuType, this->cpuSubType, this->fileType,
+                this->numberCmds, this->sizeOfCmds, this->flags);
+
+        if (!this->is_32)
+                printf(" reserved:%x", this->getReserved());
+}

@@ -36,7 +36,7 @@ public:
         uint32_t getSizeOfCmds();
         uint32_t getFlags();
         uint32_t getReserved();
-
+        void print();
 };
 
 #endif
