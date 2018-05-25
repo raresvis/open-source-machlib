@@ -61,6 +61,11 @@ class MachO
 private:
         char *fileName;
         FILE *file;
+        /* In case of Universal Binaries, offset is relative to
+         * the start of the binary and pinpoints the start of
+         * the current binary.
+         */
+        long int offset;
 
         MachHeader header;
 
@@ -133,10 +138,11 @@ private:
 	bool isEntitlementsFetched;
 
 public:
-        MachO(char  *fileName);
+        MachO(char *fileName, FILE *file = NULL, long int offset = 0);
 
         char *getFileName();
 
+        long int getOffset();
 
         MachHeader getHeader();
 

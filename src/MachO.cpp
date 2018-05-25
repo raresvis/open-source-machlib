@@ -1,12 +1,22 @@
 #include "MachO.hpp"
 #include "pugixml.hpp"
 
-MachO::MachO(char *fileName)
+MachO::MachO(char *fileName, FILE *opened_file, long int offset)
 {
         uint32_t command, index, size;
 
         this->fileName = fileName;
-        file = fopen(fileName, "rb");
+
+        this->offset = offset;
+
+        if (opened_file == NULL) {
+            this->file = fopen(fileName, "rb");
+        }
+        else {
+            this->file = opened_file;
+            fseek(this->file, offset, SEEK_SET);
+        }
+
         /*parse header*/
         header = MachHeader(file);
 
@@ -169,7 +179,7 @@ StringTable *MachO::getStringTable()
         }
 
         if(!stringTableComputed) {
-                stringTable =  new StringTable(file, symbolTableHeader);
+                stringTable =  new StringTable(file, symbolTableHeader, offset);
                 stringTableComputed = true;
         }
 
@@ -186,7 +196,8 @@ std::vector<SymbolTableEntry *> MachO::getSymbolTable()
 
                 stringTable = getStringTable();
 
-                fseek(file, symbolTableHeader.getTableOffset(), SEEK_SET);
+                fseek(file, symbolTableHeader.getTableOffset() + this->offset, SEEK_SET);
+
                 strings = stringTable->getRaw();
                 /*get the symbols*/
                 for(index = 0; index < symbolTableHeader.getNumberofSymbols(); index++) {
@@ -264,12 +275,12 @@ std::map<uint64_t, char *> MachO::getFunctionsOffset()
                 throw std::runtime_error("LC_FUNCTION_STARTS not present");
         }
 
-        addr = getSegmentByName((char*)"__TEXT")->getFileOffset();
+        addr = getSegmentByName((char*)"__TEXT")->getFileOffset() + this->offset;
         computeSymbolsFileOffset();
 
         if (!functionsOffsetComputed && size > 0) {
                 data = new uint8_t[size];
-                fseek(file, functionStartsCmd.getDataOffset(), SEEK_SET);
+                fseek(file, functionStartsCmd.getDataOffset() + this->offset, SEEK_SET);
                 FileUtils::readBytes(file, (char *)data, size);
 
                 start = data;
@@ -310,8 +321,8 @@ void MachO::computeSymbolsFileOffset()
 
         symbolTable = getSymbolTable();
         for (index = 0; index < symbolTable.size(); index++) {
-                symbolFileoffset = getSymbolFileOffset(symbolTable[index]);
-                if (symbolFileoffset != 0) {
+                symbolFileoffset = getSymbolFileOffset(symbolTable[index]) + this->offset;
+                if (symbolFileoffset != this->offset) {
                         symbolsFileOffset[symbolFileoffset] = symbolTable[index]->getName();
                         /*hack for thumb offset*/
                         symbolsFileOffset[symbolFileoffset + 1] = symbolTable[index]->getName();
@@ -638,6 +649,11 @@ std::vector<DynamicSymbolTableEntry *> MachO::getDynamicSymbolTable()
 char *MachO::getFileName()
 {
         return fileName;
+}
+
+long int MachO::getOffset()
+{
+        return this->offset;
 }
 
 MachO::~MachO()
