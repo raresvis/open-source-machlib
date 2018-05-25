@@ -1,12 +1,17 @@
 #include "MachO.hpp"
 #include "pugixml.hpp"
 
-MachO::MachO(char *fileName)
+MachO::MachO(char *fileName, long int offset)
 {
         uint32_t command, index, size;
 
         this->fileName = fileName;
-        file = fopen(fileName, "rb");
+
+        this->offset = offset;
+
+        this->file = fopen(fileName, "rb");
+        fseek(this->file, offset, SEEK_SET);
+
         /*parse header*/
         header = MachHeader(file);
 
@@ -311,7 +316,7 @@ void MachO::computeSymbolsFileOffset()
         symbolTable = getSymbolTable();
         for (index = 0; index < symbolTable.size(); index++) {
                 symbolFileoffset = getSymbolFileOffset(symbolTable[index]);
-                if (symbolFileoffset != 0) {
+                if (symbolFileoffset != offset) {
                         symbolsFileOffset[symbolFileoffset] = symbolTable[index]->getName();
                         /*hack for thumb offset*/
                         symbolsFileOffset[symbolFileoffset + 1] = symbolTable[index]->getName();
@@ -338,7 +343,7 @@ uint64_t MachO::getSymbolFileOffset(SymbolTableEntry *symbol)
                 symbolFileoffset = sectionFileOffset + sectionOffset;
         }
 
-        return symbolFileoffset;
+        return offset + symbolFileoffset;
 }
 
 /*get's the name for a given offset*/
@@ -638,6 +643,11 @@ std::vector<DynamicSymbolTableEntry *> MachO::getDynamicSymbolTable()
 char *MachO::getFileName()
 {
         return fileName;
+}
+
+long int MachO::getOffset()
+{
+        return this->offset;
 }
 
 MachO::~MachO()
