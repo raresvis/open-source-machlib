@@ -54,8 +54,6 @@ struct myKextComp {
          }
 };
 
-/*high level class*/
-/*entry point of the library*/
 class MachO
 {
 private:
