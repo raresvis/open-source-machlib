@@ -7,6 +7,7 @@ std::map<uint32_t, cs_arch> FileReader::makeCapstoneArch()
         map[CPU_TYPE_I386] = CS_ARCH_X86;
         map[CPU_TYPE_X86_64] = CS_ARCH_X86;
         map[CPU_TYPE_ARM] = CS_ARCH_ARM;
+        map[CPU_TYPE_ARM64] = CS_ARCH_ARM64;
 
         return map;
 }
@@ -36,11 +37,16 @@ FileReader::FileReader(MachO *binary)
         if (header.getIs32()) {
                 if (capstoneArchOption == CS_ARCH_X86)
                         capstoneModeOption = CS_MODE_32;
-                }
+                // If capstoneArchOption == CS_ARCH_ARM, then
+                // capstoneModeOption can be either CS_MODE_ARM or CS_MODE_THUMB
+                // and that will be decided later
+        }
         else {
                 if (capstoneArchOption == CS_ARCH_X86)
                         capstoneModeOption = CS_MODE_64;
-                }
+                if (capstoneArchOption == CS_ARCH_ARM64)
+                        capstoneModeOption = CS_MODE_ARM;
+        }
 
         if (cs_open(capstoneArchOption, capstoneModeOption, &capstoneHandle) != CS_ERR_OK) {
                 throw std::runtime_error("error opening capstone");
@@ -85,7 +91,7 @@ void FileReader::Disassemble()
         sec = binary->getSectionByIndex(1);
         seg = binary->getSegmentByName(sec->getSegmentName());
 
-        offset = seg->getFileOffset() + sec->getOffset();
+        offset = this->binary->getOffset() + seg->getFileOffset() + sec->getOffset();
         printf("%s %s\n", sec->getSegmentName(), sec->getSectionName());
         printf("%llu %llu\n", offset, sec->getSize());
 
@@ -177,7 +183,6 @@ void FileReader::DisassembleAll(uint64_t fileOffset, uint64_t size)
         }
 
         if (capstoneArchOption == CS_ARCH_ARM) {
-
                 while(true) {
                         nextOffset = getNextOffset(fileOffset);
                         if (nextOffset == 0) {
@@ -196,6 +201,10 @@ void FileReader::DisassembleAll(uint64_t fileOffset, uint64_t size)
                         fileOffset = nextOffset;
                 }
 
+        }
+
+        if (capstoneArchOption == CS_ARCH_ARM64) {
+                DisassembleARM(&code, size, fileOffset);
         }
 
         delete initialCode;
@@ -302,7 +311,7 @@ void FileReader::DisassembleARM(const uint8_t **code, uint64_t size,
 
                 /*error probably define instructions --> skip to the end*/
                 if (codeSize > 0) {
-                        printf("skipping from 0x%llx %lu\n bytes", address, codeSize);
+                        printf("skipping from 0x%llx %lu bytes\n", address, codeSize);
                         address = startAddress + size;
                         *code = initialCode + size;
                         codeSize = 0;
