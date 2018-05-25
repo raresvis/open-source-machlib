@@ -4,20 +4,46 @@
 #include <iostream>
 #include "MachO.hpp"
 #include "FileReader.hpp"
+#include "UniversalBinary.hpp"
 
 
-void print_header(MachHeader header)
+void print_header(UniversalBinary &binary)
 {
-        if (header.getMagic() == MAGIC_32)
+        if (binary.getIsUniversal()) {
+            printf("Universal Binary\n");
+
+            printf("Fat Header\n");
+            printf(" ");
+            binary.getFatHeader()->print();
+            printf("\n");
+
+            printf("Fat Architectures:\n");
+            std::vector<FatArchitecture *> fatArches = binary.getFatArches();
+            for (int i = 0; i < fatArches.size(); i++) {
+                printf(" ");
+                fatArches[i]->print();
+                printf("\n");
+            }
+
+            printf("Architecture Headers:\n");
+            std::vector<MachO *> machOs = binary.getMachOs();
+            for (int i = 0; i < machOs.size(); i++) {
+                    printf("Architecture %d header:\n", i);
+                    machOs[i]->getHeader().print();
+                    printf("\n");
+            }
+        } else {
+            MachO *bin = binary.getMachOs()[0];
+            printf("Single MachO, Not Universal\n");
+            if (bin->getHeader().getIs32())
                 printf("MACH-O 32\n");
-        else
+            else
                 printf("MACH-O 64\n");
 
-        printf("cputype:%d\n subtype:%x\nfiletype:%x\nncmds:%d\nsize:%d\nflags:%x\n", header.getCpuType(),
-                        header.getCpuSubType(), header.getFileType(), header.getNumberCmds(), header.getSizeOfCmds(), header.getFlags());
-
-        if (header.getMagic() == MAGIC_64)
-                printf("reserved:%x\n", header.getReserved());
+            printf(" ");
+            bin->getHeader().print();
+            printf("\n");
+        }
 }
 void print_section(Section *section)
 {
@@ -105,197 +131,295 @@ int main(int argc, char *argv[])
         //sscanf(argv[2], "%d", &option);
 
 
-        MachO bin(argv[1]);
-        if(strstr(argv[2], "head")) {
-                MachHeader header = bin.getHeader();
-                print_header(header);
+        UniversalBinary bin(argv[1]);
+
+        if (strstr(argv[2], "head")) {
+                print_header(bin);
         }
 
         if(strstr(argv[2], "seglc")) {
-                std::vector<Segment *> segments = bin.getSegments();
+                std::vector<MachO *> machOs = bin.getMachOs();
 
-                for(uint32_t i = 0; i < segments.size(); i++) {
-                        print_segment(segments[i]);
+                for (int m = 0; m < machOs.size(); m++) {
+                        printf("Segments of architecture number %d:\n", m);
+
+                        std::vector<Segment *> segments = machOs[m]->getSegments();
+
+                        for(uint32_t i = 0; i < segments.size(); i++) {
+                                print_segment(segments[i]);
+                        }
                 }
         }
 
         if(strstr(argv[2], "symlc")) {
-                SymbolTableHeader symbolTableHeader = bin.getSymbolTableHeader();
-                print_symbol_header(symbolTableHeader);
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                        printf("Symbol table header of architecture number %d:\n", m);
+
+                        SymbolTableHeader symbolTableHeader = machOs[m]->getSymbolTableHeader();
+                        print_symbol_header(symbolTableHeader);
+                }
         }
 
         if(strstr(argv[2], "strtab")) {
-                StringTable *stringTable = bin.getStringTable();
-                for(uint32_t i = 0; i < stringTable->getNumberOfStrings(); i++) {
-                        printf("%d---%s\n", i,  stringTable->get(i) );
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                        printf("String table of architecture number %d:\n", m);
+
+                        StringTable *stringTable = machOs[m]->getStringTable();
+
+                        for(uint32_t i = 0; i < stringTable->getNumberOfStrings(); i++) {
+                                printf("%d---%s\n", i,  stringTable->get(i) );
+                        }
                 }
         }
 
         if(strstr(argv[2], "symtab")) {
-                std::vector<SymbolTableEntry *> symbolTable = bin.getSymbolTable();
+                std::vector<MachO *> machOs = bin.getMachOs();
 
-                for(uint32_t i = 0; i < symbolTable.size(); i++) {
-                        print_symbol(symbolTable[i]);
-                        printf("\n\n");
+                for (int m = 0; m < machOs.size(); m++) {
+                        printf("\n\nSymbol table of architecture number %d:\n", m);
+
+                        std::vector<SymbolTableEntry *> symbolTable = machOs[m]->getSymbolTable();
+                        for(uint32_t i = 0; i < symbolTable.size(); i++) {
+                                print_symbol(symbolTable[i]);
+                                printf("\n\n");
+                        }
+                        break;
                 }
         }
 
         if(strstr(argv[2], "misc")) {
-                LoadDyLinkerCmd *cmd = bin.getLoadDyLinkerCmd();
-                if(cmd != NULL)
-                        printf(" the linker name is %s\n", cmd->getLinkerName() );
+                std::vector<MachO *> machOs = bin.getMachOs();
 
-                uint8_t *uuid = bin.getUUID();
-                printf("the uuid is:\n");
-                for(int i = 0; i < 16; i++) {
-                        printf("%x", uuid[i]);
-                        if((i + 1) % 4 == 0)
-                                printf("-");
+                for (int m = 0; m < machOs.size(); m++) {
+                        printf("Misc for architecture number %d:\n", m);
+
+                        LoadDyLinkerCmd *cmd = machOs[m]->getLoadDyLinkerCmd();
+                        if(cmd != NULL)
+                                printf(" the linker name is %s\n", cmd->getLinkerName() );
+
+                        uint8_t *uuid = machOs[m]->getUUID();
+                        printf("the uuid is:\n");
+                        for(int i = 0; i < 16; i++) {
+                                printf("%x", uuid[i]);
+                                if((i + 1) % 4 == 0)
+                                        printf("-");
                         }
 
-        LoadMainCmd mainCmd = bin.getLoadMainCmd();
+                        LoadMainCmd mainCmd = machOs[m]->getLoadMainCmd();
 
-        printf("\nthe main command\n");
-        printf ("entryOffset: %llu, stacksize: %llu", mainCmd.getEntryOffset(),
-                mainCmd.getStackSize());
+                        printf("\nthe main command\n");
+                        printf ("entryOffset: %llu, stacksize: %llu\n", mainCmd.getEntryOffset(),
+                                mainCmd.getStackSize());
+                }
         }
 
         if(strstr(argv[2], "liblc")) {
-                std::vector<char *> names = bin.listDynamicLibraries();
-                for(uint32_t i = 0; i < names.size(); i++)
-                        printf("%s\n", names[i]);
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                        printf("Dynamic libraries of architecture number %d:\n", m);
+
+                        std::vector<char *> names = machOs[m]->listDynamicLibraries();
+
+                        for(uint32_t i = 0; i < names.size(); i++)
+                                printf("%s\n", names[i]);
                 }
+        }
 
         if(strstr(argv[2], "fc_starts")) {
-                LinkEditCmd fcstart = bin.getFunctionStartsCmd();
+                std::vector<MachO *> machOs = bin.getMachOs();
 
-                printf("Function starts Cmd ------------\n");
-                printf("dataOffset: %u\ndataSize: %u\n", fcstart.getDataOffset(),
-                fcstart.getDataSize());
+                for (int m = 0; m < machOs.size(); m++) {
+                        printf("Functions of architecture number %d:\n", m);
 
-                std::map<uint64_t, char *> starts = bin.getFunctionsOffset();
-                std::map<uint64_t, char *>::iterator it;
+                        LinkEditCmd fcstart = machOs[m]->getFunctionStartsCmd();
 
-                for(it = starts.begin(); it != starts.end(); ++it)
-                        printf("0x%llx ----- %s\n", it->first, it->second);
+                        printf("Function starts Cmd ------------\n");
+                        printf("dataOffset: %u\ndataSize: %u\n", fcstart.getDataOffset(),
+                        fcstart.getDataSize());
+
+                        std::map<uint64_t, char *> starts = machOs[m]->getFunctionsOffset();
+                        std::map<uint64_t, char *>::iterator it;
+
+                        for(it = starts.begin(); it != starts.end(); ++it)
+                                printf("0x%llx ----- %s\n", it->first, it->second);
+                }
         }
 
         if(strstr(argv[2], "dis_all")) {
-                FileReader fileReader(&bin);
-                fileReader.Disassemble();
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                        printf("Disassembly of architecture number %d:\n", m);
+
+                        printf("1\n");
+                        FileReader fileReader(machOs[m]);
+                        printf("2\n");
+                        fileReader.Disassemble();
+                }
         }
 
         if(strstr(argv[2], "dis_main")) {
-                FileReader fileReader(&bin);
-                fileReader.Disassemble((char *)"_main");
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                    FileReader fileReader(machOs[m]);
+                    fileReader.Disassemble((char *)"_main");
+                }
         }
 
         if(strstr(argv[2], "dis_offset")) {
-                FileReader fileReader(&bin);
-                fileReader.Disassemble(7030);
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                    FileReader fileReader(machOs[m]);
+                    fileReader.Disassemble(7030);
+                }
         }
 
+        //TODO: test with fat binary, does a fat binary make sense in this context
         if(strstr(argv[2], "kexts")) {
-                std::vector<std::map<char *, char *, myKextComp> > map = bin.getKextsInfo();
-                std::map<char *, char *, myKextComp>::iterator it;
-                for (uint32_t i = 0; i < map.size(); i++) {
-                        printf("kext %d\n", i);
-                        for (it = map[i].begin(); it != map[i].end(); ++it) {
-                                printf("%s -- %s\n", it->first, it->second);
-                        }
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                    std::vector<std::map<char *, char *, myKextComp> > map = machOs[m]->getKextsInfo();
+                    std::map<char *, char *, myKextComp>::iterator it;
+                    for (uint32_t i = 0; i < map.size(); i++) {
+                            printf("kext %d\n", i);
+                            for (it = map[i].begin(); it != map[i].end(); ++it) {
+                                    printf("%s -- %s\n", it->first, it->second);
+                            }
+                    }
+                    printf("got %lu kernel extensions\n", map.size() );
                 }
-                printf("got %lu kernel extensions\n", map.size() );
         }
 
+        //TODO: test with fat binary, does a fat binary make sense in this context
         if(strstr(argv[2], "find_kext")) {
-                std::map<char *, char *, myKextComp> map2;
-                map2 = bin.getKextByBundleId((char *)"com.apple.kpi.mach");
-                std::map<char *, char *, myKextComp>::iterator it;
-                for (it = map2.begin(); it != map2.end(); ++it) {
-                        printf("%s --- %s\n", it->first, it->second);
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                    std::map<char *, char *, myKextComp> map2;
+                    map2 = machOs[m]->getKextByBundleId((char *)"com.apple.kpi.mach");
+                    std::map<char *, char *, myKextComp>::iterator it;
+                    for (it = map2.begin(); it != map2.end(); ++it) {
+                            printf("%s --- %s\n", it->first, it->second);
+                    }
                 }
         }
 
+        //TODO: test with fat binary, does a fat binary make sense in this context
         if(strstr(argv[2], "dump_section")) {
-                FileReader fileReader(&bin);
-                uint64_t size;
-                char * raw = fileReader.dumpSection((char *)"__TEXT", (char *)"__cstring", &size);
-                for (uint64_t i = 0; i < size; i++)
-                        printf("%c", raw[i]);
-                delete raw;
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                    FileReader fileReader(machOs[m]);
+                    uint64_t size;
+                    char * raw = fileReader.dumpSection((char *)"__TEXT", (char *)"__cstring", &size);
+                    for (uint64_t i = 0; i < size; i++)
+                            printf("%c", raw[i]);
+                    delete raw;
+                }
         }
 
+        //TODO: test with fat binary, does a fat binary make sense in this context
         if (strstr(argv[2], "dump_kext")) {
-                bin.dumpKext((char *)"com.apple.iokit.IOTimeSyncFamily", (char *) "kpi");
+                std::vector<MachO *> machOs = bin.getMachOs();
+
+                for (int m = 0; m < machOs.size(); m++) {
+                    machOs[m]->dumpKext((char *)"com.apple.iokit.IOTimeSyncFamily", (char *) "kpi");
+                }
         }
 
         if (strstr(argv[2], "indsymtab")) {
-                std::vector<DynamicSymbolTableEntry *> index = bin.getDynamicSymbolTable();
-                for (uint32_t  i = 0; i < index.size(); i++) {
-                        printf("%u---", index[i]->getIndex());
-                        printf("%llx --- ", index[i]->getIndirectAdress() );
-                        printf("%s\n", index[i]->getName());
-                }
+                std::vector<MachO *> machOs = bin.getMachOs();
 
+                for (int m = 0; m < machOs.size(); m++) {
+                    std::vector<DynamicSymbolTableEntry *> index = machOs[m]->getDynamicSymbolTable();
+                    for (uint32_t  i = 0; i < index.size(); i++) {
+                            printf("%u---", index[i]->getIndex());
+                            printf("%llx --- ", index[i]->getIndirectAdress() );
+                            printf("%s\n", index[i]->getName());
+                    }
+                }
         }
 
+    //TODO: test with fat binary
 	if (strstr(argv[2], "siglc")) {
-		LinkEditCmd codeSignatureCmd = bin.getCodeSignatureCmd();
-		puts("LC_CODE_SIGNATURE");
-		printf("Offset: %d, Size: %d\n", codeSignatureCmd.getDataOffset(),
-			codeSignatureCmd.getDataSize());
+        std::vector<MachO *> machOs = bin.getMachOs();
 
-		puts("---------------------------");
+        for (int m = 0; m < machOs.size(); m++) {
+            LinkEditCmd codeSignatureCmd = machOs[m]->getCodeSignatureCmd();
+            puts("LC_CODE_SIGNATURE");
+            printf("Offset: %d, Size: %d\n", codeSignatureCmd.getDataOffset(),
+                codeSignatureCmd.getDataSize());
 
-		SuperBlob sb = bin.getSuperBlob();
-		puts("SuperBlob");
-		printf("Length: %d, NumBlobs: %d\n", sb.getLength(), sb.getNumBlobs());
+            puts("---------------------------");
 
-		std::vector<struct subblob> sbs = sb.getSubBlobs();
-		for (unsigned int i = 0; i < sb.getNumBlobs(); i++) {
-			printf("\tType: %d, Offset: %d\n", sbs[i].type, sbs[i].offset);
-		}
+            SuperBlob sb = machOs[m]->getSuperBlob();
+            puts("SuperBlob");
+            printf("Length: %d, NumBlobs: %d\n", sb.getLength(), sb.getNumBlobs());
+
+            std::vector<struct subblob> sbs = sb.getSubBlobs();
+            for (unsigned int i = 0; i < sb.getNumBlobs(); i++) {
+                printf("\tType: %d, Offset: %d\n", sbs[i].type, sbs[i].offset);
+            }
+        }
 	}
 
+    //TODO: test with fat binary
 	if (strstr(argv[2], "ent")) {
-		Entitlements ent = bin.getEntitlements();
-		puts("Entitlements");
-		puts("------------");
-		std::cout<<ent.getXml()<<"\n";
+        std::vector<MachO *> machOs = bin.getMachOs();
+
+        for (int m = 0; m < machOs.size(); m++) {
+            Entitlements ent = machOs[m]->getEntitlements();
+            puts("Entitlements");
+            puts("------------");
+            std::cout<<ent.getXml()<<"\n";
+        }
 	}
 
+    //TODO: test with fat binary
 	if (strstr(argv[2], "cdb")) {
-		CodeDirectoryBlob cdb = bin.getCodeDirectoryBlob();
-		puts("Code Directory Blob");
-		puts("------------");
-		printf("length: %d\n", cdb.getLength());
-		printf("version: %#08X\n", cdb.getVersion());
-		printf("flags: %#08X\n", cdb.getFlags());
-		printf("hashOffset: %d\n", cdb.getHashOffset());
-		printf("identOffset: %d\n", cdb.getIdentOffset());
-		printf("nSpecialSlots: %d\n", cdb.getNSpecialSlots());
-		printf("nCodeSlots: %d\n", cdb.getNCodeSlots());
-		printf("codeLimit: %d\n", cdb.getCodeLimit());
-		printf("hashType: %d\n", cdb.getHashType());
-		printf("hashSize: %d\n", cdb.getHashSize());
-		printf("pageSize: %d\n", cdb.getPageSize());
+        std::vector<MachO *> machOs = bin.getMachOs();
 
-		uint32_t nSpecialSlots = cdb.getNSpecialSlots();
-		uint32_t nCodeSlots = cdb.getNCodeSlots();
-		uint32_t hashSize = cdb.getHashSize();
-		std::vector<char*> hashes = cdb.getHashes();
-		for (uint32_t i = 0; i < nSpecialSlots; i++) {
-			printf("%d: ", -nSpecialSlots + i);
-			for (uint32_t j = 0; j < hashSize; j++)
-				printf("%02hhx", hashes[i][j]);
-			puts("");
-		}
-		for (uint32_t i = nSpecialSlots; i < nSpecialSlots + nCodeSlots; i++) {
-			printf("%d: ", i - nSpecialSlots);
-			for (uint32_t j = 0; j < hashSize; j++)
-				printf("%02hhx", hashes[i][j]);
-			puts("");
-		}
+        for (int m = 0; m < machOs.size(); m++) {
+            CodeDirectoryBlob cdb = machOs[m]->getCodeDirectoryBlob();
+            puts("Code Directory Blob");
+            puts("------------");
+            printf("length: %d\n", cdb.getLength());
+            printf("version: %#08X\n", cdb.getVersion());
+            printf("flags: %#08X\n", cdb.getFlags());
+            printf("hashOffset: %d\n", cdb.getHashOffset());
+            printf("identOffset: %d\n", cdb.getIdentOffset());
+            printf("nSpecialSlots: %d\n", cdb.getNSpecialSlots());
+            printf("nCodeSlots: %d\n", cdb.getNCodeSlots());
+            printf("codeLimit: %d\n", cdb.getCodeLimit());
+            printf("hashType: %d\n", cdb.getHashType());
+            printf("hashSize: %d\n", cdb.getHashSize());
+            printf("pageSize: %d\n", cdb.getPageSize());
+
+            uint32_t nSpecialSlots = cdb.getNSpecialSlots();
+            uint32_t nCodeSlots = cdb.getNCodeSlots();
+            uint32_t hashSize = cdb.getHashSize();
+            std::vector<char*> hashes = cdb.getHashes();
+            for (uint32_t i = 0; i < nSpecialSlots; i++) {
+                printf("%d: ", -nSpecialSlots + i);
+                for (uint32_t j = 0; j < hashSize; j++)
+                    printf("%02hhx", hashes[i][j]);
+                puts("");
+            }
+            for (uint32_t i = nSpecialSlots; i < nSpecialSlots + nCodeSlots; i++) {
+                printf("%d: ", i - nSpecialSlots);
+                for (uint32_t j = 0; j < hashSize; j++)
+                    printf("%02hhx", hashes[i][j]);
+                puts("");
+            }
+        }
 	}
         return 0;
 }
