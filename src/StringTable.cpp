@@ -1,10 +1,10 @@
 #include "StringTable.hpp"
 
-StringTable::StringTable(FILE *file, SymbolTableHeader tableHeader)
+StringTable::StringTable(FILE *file, SymbolTableHeader tableHeader, long int offsetToMachO)
 {
         uint32_t tableSize, dataIndex;
 
-        fseek(file, tableHeader.getStringTableOffset(), SEEK_SET);
+        fseek(file, tableHeader.getStringTableOffset() + offsetToMachO, SEEK_SET);
 
         tableSize = tableHeader.getStringTableSize();
         raw = new char[tableSize];

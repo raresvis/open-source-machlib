@@ -18,7 +18,7 @@ private:
         std::vector<char *> table;
 
 public:
-        StringTable(FILE *file, SymbolTableHeader tableHeader);
+        StringTable(FILE *file, SymbolTableHeader tableHeader, long int offsetToMachO = 0);
         StringTable();
 
         char *getRaw();
