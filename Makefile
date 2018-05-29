@@ -13,7 +13,7 @@ INC := -I include
 OS := $(shell uname)
 
 
-build: $(TARGET) bin/poc
+build: $(TARGET) bin/poc bin/kext_extract
 
 $(TARGET): $(OBJECTS)
 	@mkdir -p $(LIBDIR)
@@ -40,6 +40,9 @@ clean:
 	@echo " $(RM) -r $(BUILDDIR) $(TARGET) bin/poc"; $(RM) -r $(BUILDDIR) $(TARGET) bin/poc
 
 bin/poc: poc/poc.cpp
+	@echo " $(CC) -L$(LIBDIR) -o $@ $< -lopenmach $(INC)"; $(CC) -L$(LIBDIR) -o $@ $< -lopenmach $(INC)
+
+bin/kext_extract: poc/kext_extract.cpp
 	@echo " $(CC) -L$(LIBDIR) -o $@ $< -lopenmach $(INC)"; $(CC) -L$(LIBDIR) -o $@ $< -lopenmach $(INC)
 
 .PHONY: clean
