@@ -85,7 +85,7 @@ void FileReader::Disassemble()
         sec = binary->getSectionByIndex(1);
         seg = binary->getSegmentByName(sec->getSegmentName());
 
-        offset = seg->getFileOffset() + sec->getOffset();
+        offset = seg->getRealFileOffset() + sec->getOffset();
         printf("%s %s\n", sec->getSegmentName(), sec->getSectionName());
         printf("%llu %llu\n", offset, sec->getSize());
 

@@ -15,10 +15,11 @@ private:
         uint64_t fileSize;
 
 public:
-        Segment64(FILE *f);
+        Segment64(FILE *f, uint64_t machOoffset);
         virtual uint64_t getVirtualAddress();
         virtual uint64_t getVirtualSize();
         virtual uint64_t getFileOffset();
+        virtual uint64_t getRealFileOffset();
         virtual uint64_t getFileSize();
 };
 

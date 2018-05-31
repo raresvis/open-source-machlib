@@ -19,12 +19,15 @@ protected:
         uint32_t flags;
         std::vector<Section *> sections;
 
+        uint64_t machOoffset;
+
 /*unified interface for both 32 bit and 64 bit*/
 public:
         char *getName();
         virtual uint64_t getVirtualAddress() = 0;
         virtual uint64_t getVirtualSize() = 0;
         virtual uint64_t getFileOffset() = 0;
+        virtual uint64_t getRealFileOffset() = 0;
         virtual uint64_t getFileSize() = 0;
         uint32_t getMaxProtection();
         uint32_t getInitProtection();

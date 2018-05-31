@@ -2,9 +2,11 @@
 #include "Segment64.hpp"
 #include "Section64.hpp"
 
-Segment64::Segment64(FILE *file)
+Segment64::Segment64(FILE *file, uint64_t machOoffset)
 {
         uint32_t cmdSize, index;
+
+        this->machOoffset = machOoffset;
 
         FileUtils::readUint32(file, &cmdSize);
 
@@ -46,6 +48,11 @@ uint64_t Segment64::getVirtualSize()
 uint64_t Segment64::getFileOffset()
 {
         return fileOffset;
+}
+
+uint64_t Segment64::getRealFileOffset()
+{
+        return machOoffset + fileOffset;
 }
 
 uint64_t Segment64::getFileSize()

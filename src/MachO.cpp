@@ -30,11 +30,11 @@ MachO::MachO(char *fileName, long int offset)
                 switch(command) {
 
                         case LC_SEGMENT32:
-                                segments.push_back(new Segment32(file));
+                                segments.push_back(new Segment32(file, offset));
                                 break;
 
                         case LC_SEGMENT64:
-                                segments.push_back(new Segment64(file));
+                                segments.push_back(new Segment64(file, offset));
                                 break;
 
                         case LC_SYMTAB:
@@ -269,7 +269,7 @@ std::map<uint64_t, char *> MachO::getFunctionsOffset()
                 throw std::runtime_error("LC_FUNCTION_STARTS not present");
         }
 
-        addr = getSegmentByName((char*)"__TEXT")->getFileOffset();
+        addr = getSegmentByName((char*)"__TEXT")->getRealFileOffset();
         computeSymbolsFileOffset();
 
         if (!functionsOffsetComputed && size > 0) {
@@ -522,7 +522,7 @@ uint64_t MachO::getVirtToFile(uint64_t virtualAddress)
         }
 
         segmentOffset = virtualAddress -  seg->getVirtualAddress();
-        return seg->getFileOffset() + segmentOffset;
+        return seg->getRealFileOffset() + segmentOffset;
 }
 
 void MachO::dumpKext(char *bundleId, char *fileName)
