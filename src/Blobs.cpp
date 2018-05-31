@@ -8,7 +8,7 @@ SuperBlob::SuperBlob(FILE *file, LinkEditCmd sigCmd)
 {
 	struct subblob sb;
 	uint32_t buf;
-	uint32_t offset = sigCmd.getDataOffset();
+	uint32_t offset = sigCmd.getDataRealOffset();
 
 	fseek(file, offset, SEEK_SET);
 	FileUtils::readNetworkUint32(file, &buf);		
@@ -51,7 +51,7 @@ CodeDirectoryBlob::CodeDirectoryBlob(FILE *file, LinkEditCmd sigCmd,
 {
 	char *buf;
 	uint32_t magic;
-	uint32_t sbOffset = sigCmd.getDataOffset();
+	uint32_t sbOffset = sigCmd.getDataRealOffset();
 	uint32_t cdbOffset = 0;
 	std::vector<struct subblob> sbs = sb.getSubBlobs();
 

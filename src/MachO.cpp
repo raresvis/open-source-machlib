@@ -61,7 +61,7 @@ MachO::MachO(char *fileName, long int offset)
                                 break;
 
                         case LC_FUNCTION_STARTS:
-                                functionStartsCmd = LinkEditCmd(file);
+                                functionStartsCmd = LinkEditCmd(file, offset);
                                 functionStartsCmdPresent = true;
                                 break;
 
@@ -70,7 +70,7 @@ MachO::MachO(char *fileName, long int offset)
                                 break;
 
                         case LC_CODE_SIGNATURE:
-                                codeSignatureCmd = LinkEditCmd(file);
+                                codeSignatureCmd = LinkEditCmd(file, offset);
                                 codeSignatureCmdPresent = true;
                                 break;
 
@@ -274,7 +274,7 @@ std::map<uint64_t, char *> MachO::getFunctionsOffset()
 
         if (!functionsOffsetComputed && size > 0) {
                 data = new uint8_t[size];
-                fseek(file, functionStartsCmd.getDataOffset(), SEEK_SET);
+                fseek(file, functionStartsCmd.getDataRealOffset(), SEEK_SET);
                 FileUtils::readBytes(file, (char *)data, size);
 
                 start = data;
@@ -733,7 +733,7 @@ Entitlements MachO::getEntitlements()
 	for (unsigned int i = 0; i < sbs.size(); i++) {
 		if (sbs[i].type == ENTITLEMENTS_VALUE) {
 			ent_offset = sbs[i].offset;
-			fseek(file, codeSignatureCmd.getDataOffset() + ent_offset, SEEK_SET);
+			fseek(file, codeSignatureCmd.getDataRealOffset() + ent_offset, SEEK_SET);
 			FileUtils::readNetworkUint32(file, &magic);
 			FileUtils::readNetworkUint32(file, &ent_size);
 			/* account for the first 2 uints that we just read */

@@ -47,10 +47,13 @@ private:
         uint32_t dataOffset;
         uint32_t dataSize;
 
+        uint32_t machOoffset;
+
 public:
-        LinkEditCmd(FILE *file);
+        LinkEditCmd(FILE *file, uint32_t machOoffset);
         LinkEditCmd();
         uint32_t getDataOffset();
+        uint32_t getDataRealOffset();
         uint32_t getDataSize();
 
 };

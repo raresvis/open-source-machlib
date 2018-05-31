@@ -66,7 +66,8 @@ LinkEditCmd::LinkEditCmd()
         dataSize = 0;
 }
 
-LinkEditCmd::LinkEditCmd(FILE *file)
+LinkEditCmd::LinkEditCmd(FILE *file, uint32_t machOoffset) :
+    machOoffset(machOoffset)
 {
         uint32_t cmdSize;
 
@@ -80,6 +81,11 @@ LinkEditCmd::LinkEditCmd(FILE *file)
 uint32_t LinkEditCmd::getDataOffset()
 {
         return dataOffset;
+}
+
+uint32_t LinkEditCmd::getDataRealOffset()
+{
+        return machOoffset + dataOffset;
 }
 
 uint32_t LinkEditCmd::getDataSize()
