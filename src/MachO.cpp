@@ -38,7 +38,7 @@ MachO::MachO(char *fileName, long int offset)
                                 break;
 
                         case LC_SYMTAB:
-                                symbolTableHeader = SymbolTableHeader(file);
+                                symbolTableHeader = SymbolTableHeader(file, offset);
                                 symbolTableHeaderPresent = true;
                                 break;
 
@@ -191,7 +191,7 @@ std::vector<SymbolTableEntry *> MachO::getSymbolTable()
 
                 stringTable = getStringTable();
 
-                fseek(file, symbolTableHeader.getTableOffset(), SEEK_SET);
+                fseek(file, symbolTableHeader.getTableRealOffset(), SEEK_SET);
                 strings = stringTable->getRaw();
                 /*get the symbols*/
                 for(index = 0; index < symbolTableHeader.getNumberofSymbols(); index++) {

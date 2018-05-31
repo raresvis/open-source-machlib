@@ -4,7 +4,7 @@ StringTable::StringTable(FILE *file, SymbolTableHeader tableHeader)
 {
         uint32_t tableSize, dataIndex;
 
-        fseek(file, tableHeader.getStringTableOffset(), SEEK_SET);
+        fseek(file, tableHeader.getStringTableRealOffset(), SEEK_SET);
 
         tableSize = tableHeader.getStringTableSize();
         raw = new char[tableSize];

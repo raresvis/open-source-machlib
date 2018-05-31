@@ -1,6 +1,7 @@
 #include "SymbolTableHeader.hpp"
 
-SymbolTableHeader::SymbolTableHeader(FILE *file)
+SymbolTableHeader::SymbolTableHeader(FILE *file, uint32_t _machOoffset) :
+    machOoffset(_machOoffset)
 {
         uint32_t cmdSize;
 
@@ -24,6 +25,11 @@ uint32_t SymbolTableHeader::getTableOffset()
         return tableOffset;
 }
 
+uint32_t SymbolTableHeader::getTableRealOffset()
+{
+        return machOoffset + tableOffset;
+}
+
 uint32_t SymbolTableHeader::getNumberofSymbols()
 {
         return numberSymbols;
@@ -32,6 +38,11 @@ uint32_t SymbolTableHeader::getNumberofSymbols()
 uint32_t SymbolTableHeader::getStringTableOffset()
 {
         return stringTableOffset;
+}
+
+uint32_t SymbolTableHeader::getStringTableRealOffset()
+{
+        return machOoffset + stringTableOffset;
 }
 
 uint32_t SymbolTableHeader::getStringTableSize()
