@@ -15,7 +15,7 @@ private:
         uint32_t reserved3;
 
 public:
-        Section64(FILE *file);
+        Section64(FILE *file, uint32_t machOoffset);
         virtual uint64_t getVirtualAddress();
         virtual uint64_t getSize();
         virtual uint32_t getReserved3();

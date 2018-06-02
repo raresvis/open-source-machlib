@@ -30,7 +30,7 @@ Segment64::Segment64(FILE *file, uint64_t machOoffset)
 
         /*parse sections*/
         for(index = 0; index < numberSections; index++) {
-                sections.push_back(new Section64(file));
+                sections.push_back(new Section64(file, machOoffset));
         }
 
 }

@@ -1,8 +1,10 @@
 #include "Section64.hpp"
 #include "FileUtils.hpp"
 
-Section64::Section64(FILE *file)
+Section64::Section64(FILE *file, uint32_t machOoffset)
 {
+        this->machOoffset = machOoffset;
+
         FileUtils::readBytes(file, sectionName, 16);
 
         FileUtils::readBytes(file, segmentName, 16);
