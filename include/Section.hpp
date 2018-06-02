@@ -36,6 +36,8 @@ protected:
         uint32_t reserved1;
         uint32_t reserved2;
 
+        uint32_t machOoffset;
+
 /*unified interface for both 32 bit and 64 bit*/
 public:
         char *getSectionName();
@@ -43,6 +45,7 @@ public:
         virtual uint64_t getVirtualAddress() = 0;
         virtual uint64_t getSize() = 0;
         uint32_t getOffset();
+        uint32_t getRealOffset();
         uint32_t getAlign();
         uint32_t getRelocationOffset();
         uint32_t getNumberRelocations();

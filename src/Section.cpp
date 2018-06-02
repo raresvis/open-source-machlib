@@ -17,6 +17,11 @@ uint32_t Section::getOffset()
         return offset;
 }
 
+uint32_t Section::getRealOffset()
+{
+        return machOoffset + offset;
+}
+
 uint32_t Section::getAlign()
 {
         return align;
