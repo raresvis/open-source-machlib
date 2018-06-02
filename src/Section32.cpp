@@ -1,8 +1,9 @@
 #include "Section32.hpp"
 #include "FileUtils.hpp"
 
-Section32::Section32(FILE *file)
+Section32::Section32(FILE *file, uint32_t machOoffset)
 {
+        this->machOoffset = machOoffset;
 
         FileUtils::readBytes(file, sectionName, 16);
 
