@@ -10,8 +10,12 @@
 
 #define CSMAGIC_EMBEDDED_SIGNATURE 	0xFADE0CC0
 #define CSMAGIC_DIRECTORY_BLOB		0xFADE0C02
+#define CSMAGIC_REQUIREMENT_SET		0xFADE0C01
+#define CSMAGIC_REQUIREMENT_BLOB	0xFADE0C00 //NOT USED
+#define CSMAGIC_ENTITLEMENTS_BLOB	0xFADE7171
 
 #define CODE_DIRECTORY_BLOB		0x0
+#define REQUIREMENTS	    	0x2
 
 struct subblob {
 	uint32_t type;
@@ -77,5 +81,22 @@ public:
 
 };
 
+
+class RequirementSet
+{
+private:
+	uint32_t length;
+	uint32_t numBlobs;
+	std::vector<struct subblob> subblobs;
+
+    uint32_t realOffset;
+public:
+    RequirementSet(FILE *file, uint32_t realOffset);
+    RequirementSet();
+	uint32_t getLength();
+	uint32_t getNumBlobs();
+	uint32_t getRealOffset();
+	std::vector<struct subblob> getSubBlobs();
+};
 
 #endif
