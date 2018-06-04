@@ -191,3 +191,49 @@ std::vector<char *>
 }
 
 
+RequirementSet::RequirementSet(FILE *file, uint32_t realOffset)
+{
+    uint32_t magic = 0;
+	struct subblob sb;
+
+    this->realOffset = realOffset;
+
+	fseek(file, realOffset, SEEK_SET);
+	FileUtils::readNetworkUint32(file, &magic);
+	if (magic != CSMAGIC_REQUIREMENT_SET)
+        throw std::runtime_error("Requirement Set magic number not valid!");
+
+	FileUtils::readNetworkUint32(file, &length);
+	FileUtils::readNetworkUint32(file, &numBlobs);
+
+	for (unsigned int i = 0; i < numBlobs; i++) {
+		FileUtils::readNetworkUint32(file, &sb.type);
+		FileUtils::readNetworkUint32(file, &sb.offset);
+		subblobs.push_back(sb);
+	}
+}
+
+RequirementSet::RequirementSet()
+{
+}
+
+uint32_t RequirementSet::getLength()
+{
+    return length;
+}
+
+uint32_t RequirementSet::getNumBlobs()
+{
+	return numBlobs;
+}
+
+uint32_t RequirementSet::getRealOffset()
+{
+    return realOffset;
+}
+
+std::vector<struct subblob> RequirementSet::getSubBlobs()
+{
+    return subblobs;
+}
+
