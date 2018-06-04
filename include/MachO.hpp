@@ -52,6 +52,12 @@
 #define HASHSIZE_SHA256             32
 #define HASHSIZE_SHA1               20
 
+#define SPECIAL_SIG_INFOPLIST       4
+#define SPECIAL_SIG_REQUIREMENTS    3
+#define SPECIAL_SIG_RESOURCEDIR     2 //NOT USED
+#define SPECIAL_SIG_APPSPECIFIC     1 //NOT USED
+#define SPECIAL_SIG_ENTITLEMENTS    0
+
 
 struct myKextComp {
          bool operator()(char *a, char *b) const {
@@ -140,10 +146,19 @@ private:
 	Entitlements entitlements;
 	bool isEntitlementsFetched;
 
+    std::vector<bool> hashValidities;
+
     bool performSHA1(unsigned char *input, uint32_t inputSize, unsigned char *output);
     bool performSHA256(unsigned char *input, uint32_t inputSize, unsigned char *output);
     bool performSHA(FILE *file, uint32_t inputOffset, uint32_t hashSize,
                     uint32_t inputSize, unsigned char **output);
+
+    bool isInfoPlistValid();
+    bool isRequirementSetValid();
+    bool areEntitlementsValid();
+
+    bool isSpecialSignatureValid(uint32_t slot_index);
+    bool areSpecialSignaturesValid();
 
 public:
         MachO(char *fileName, long int offset);
