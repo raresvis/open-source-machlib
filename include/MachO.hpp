@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <openssl/sha.h>
 #include "FileUtils.hpp"
 #include "MachHeader.hpp"
 #include "Section.hpp"
@@ -47,6 +48,10 @@
 #define LC_CODE_SIGNATURE	0x1D
 
 #define NAMEPREFIX              "func_"
+
+#define HASHSIZE_SHA256             32
+#define HASHSIZE_SHA1               20
+
 
 struct myKextComp {
          bool operator()(char *a, char *b) const {
@@ -134,6 +139,11 @@ private:
 	/* entitlements */
 	Entitlements entitlements;
 	bool isEntitlementsFetched;
+
+    bool performSHA1(unsigned char *input, uint32_t inputSize, unsigned char *output);
+    bool performSHA256(unsigned char *input, uint32_t inputSize, unsigned char *output);
+    bool performSHA(FILE *file, uint32_t inputOffset, uint32_t hashSize,
+                    uint32_t inputSize, unsigned char **output);
 
 public:
         MachO(char *fileName, long int offset);
