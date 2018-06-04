@@ -24,6 +24,8 @@ private:
 	uint32_t length;
 	uint32_t numBlobs;
 	std::vector<struct subblob> subblobs;
+
+    uint32_t realOffset;
 public:
 	SuperBlob(FILE *file, LinkEditCmd sigCmd);
 	SuperBlob();
@@ -31,7 +33,7 @@ public:
 	uint32_t getNumBlobs();
 	std::vector<struct subblob> getSubBlobs();
 	
-
+    uint32_t getRealOffset();
 };
 
 class CodeDirectoryBlob
