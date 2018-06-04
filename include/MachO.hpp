@@ -160,6 +160,10 @@ private:
     bool isSpecialSignatureValid(uint32_t slot_index);
     bool areSpecialSignaturesValid();
 
+    void performCodeHash(FILE *inputFile, uint32_t slot_index, uint32_t pageSize, uint32_t codeLimit, uint32_t hashSize, unsigned char **output);
+    bool isCodeSignatureValid(uint32_t slot_index);
+    bool areCodeSignaturesValid();
+
 public:
         MachO(char *fileName, long int offset);
 
