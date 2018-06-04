@@ -215,6 +215,8 @@ public:
 	CodeDirectoryBlob getCodeDirectoryBlob();
 	Entitlements getEntitlements();
 
+    bool areSignaturesValid();
+
         ~MachO();
 };
 

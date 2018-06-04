@@ -1065,3 +1065,8 @@ bool MachO::areCodeSignaturesValid()
 
     return allValid;
 }
+
+bool MachO::areSignaturesValid()
+{
+    return  areSpecialSignaturesValid() && areCodeSignaturesValid();
+}
