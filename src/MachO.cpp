@@ -990,3 +990,78 @@ bool MachO::areSpecialSignaturesValid()
 
     return allValid;
 }
+
+bool MachO::isCodeSignatureValid(uint32_t slot_index)
+{
+    CodeDirectoryBlob cdb;
+    unsigned char *resultingSHA = NULL;
+    uint32_t pageSize  = 0;
+    uint32_t hashedSize  = 0;
+    uint32_t nSpecialSlots = 0;
+    uint32_t nCodeSlots = 0;
+    uint32_t hashSize = 0;
+    uint32_t codeLimit = 0;
+    std::vector<char*> hashes;
+
+    cdb = getCodeDirectoryBlob();
+
+    pageSize = 1 << cdb.getPageSize();
+    hashedSize = pageSize;
+
+    nSpecialSlots = cdb.getNSpecialSlots();
+    nCodeSlots = cdb.getNCodeSlots();
+    hashSize = cdb.getHashSize();
+    hashes = cdb.getHashes();
+    codeLimit = cdb.getCodeLimit();
+
+    if (slot_index > nCodeSlots) {
+        printf("Invalid slot index %d!\n", slot_index);
+        return false;
+    }
+
+    if (hashSize != 32 && hashSize != 20) {
+        printf("Incompatible sizes %d!\n", hashSize);
+        return false;
+    }
+
+    /* Last page usually has a big portion of it that's just padding. This
+     * happens because most often, the binary size will not have an integer
+     * number of pages, therefore the last page is not fully filled with
+     * valid data.
+     */
+    if (codeLimit >= slot_index * pageSize && codeLimit < (slot_index + 1)* pageSize)
+        hashedSize = codeLimit - slot_index * pageSize;
+
+    performSHA(file, slot_index * pageSize + offset, hashSize, hashedSize, &resultingSHA);
+
+    for (int i = 0; i < hashSize; i++)
+        if ((unsigned char)hashes[nSpecialSlots + slot_index][i] != resultingSHA[i]) {
+            printf("Hash mismatch at %d!\n", i);
+            delete resultingSHA;
+
+            return false;
+        }
+
+    delete resultingSHA;
+
+    return true;
+}
+
+bool MachO::areCodeSignaturesValid()
+{
+    bool allValid = true;
+    bool currentValidity = false;
+    CodeDirectoryBlob cdb;
+
+    cdb = getCodeDirectoryBlob();
+
+    for (int i = 0; i < cdb.getNCodeSlots(); i++) {
+        currentValidity = isCodeSignatureValid(i);
+        if (!currentValidity)
+            allValid = false;
+
+        hashValidities.push_back(currentValidity);
+    }
+
+    return allValid;
+}

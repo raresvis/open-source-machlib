@@ -160,6 +160,9 @@ private:
     bool isSpecialSignatureValid(uint32_t slot_index);
     bool areSpecialSignaturesValid();
 
+    bool isCodeSignatureValid(uint32_t slot_index);
+    bool areCodeSignaturesValid();
+
 public:
         MachO(char *fileName, long int offset);
 
