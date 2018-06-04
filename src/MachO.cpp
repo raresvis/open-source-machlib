@@ -767,3 +767,61 @@ CodeDirectoryBlob MachO::getCodeDirectoryBlob()
 	isCodeDirectoryBlobFetched = true;
 	return codeDirectoryBlob;
 }
+
+bool MachO::performSHA1(unsigned char *input, uint32_t inputSize, unsigned char *output)
+{
+    SHA_CTX sha1;
+    SHA_Init(&sha1);
+    SHA_Update(&sha1, input, inputSize);
+    SHA_Final(output, &sha1);
+
+    return true;
+}
+
+bool MachO::performSHA256(unsigned char *input, uint32_t inputSize, unsigned char *output)
+{
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, input, inputSize);
+    SHA256_Final(output, &sha256);
+
+    return true;
+}
+
+bool MachO::performSHA(FILE *file, uint32_t inputOffset, uint32_t hashSize,
+                       uint32_t inputSize, unsigned char **output)
+{
+    unsigned char *input = NULL;
+    bool ret = false;
+
+    *output = new unsigned char[hashSize];
+    if (!(*output)) {
+        printf("Could not allocate memory for SHA output!\n");
+        return false;
+    }
+
+    input = new unsigned char[inputSize];
+    if (!input) {
+        printf("Could not allocate memory for SHA input (%d bytes)!\n", inputSize);
+        delete *output;
+
+        return false;
+    }
+
+    fseek(file, inputOffset, SEEK_SET);
+    fread(input, inputSize, 1, file);
+
+    if (hashSize == HASHSIZE_SHA256)
+        ret = performSHA256(input, inputSize, *output);
+    else
+        ret = performSHA1(input, inputSize, *output);
+
+    if (!ret) {
+        delete *output;
+        delete input;
+
+        return false;
+    }
+
+    return true;
+}
