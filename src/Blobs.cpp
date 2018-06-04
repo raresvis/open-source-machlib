@@ -8,9 +8,10 @@ SuperBlob::SuperBlob(FILE *file, LinkEditCmd sigCmd)
 {
 	struct subblob sb;
 	uint32_t buf;
-	uint32_t offset = sigCmd.getDataRealOffset();
 
-	fseek(file, offset, SEEK_SET);
+    realOffset = sigCmd.getDataRealOffset();
+
+	fseek(file, realOffset, SEEK_SET);
 	FileUtils::readNetworkUint32(file, &buf);		
 	if (buf != CSMAGIC_EMBEDDED_SIGNATURE) {
                 throw std::runtime_error("Signature not valid.");
@@ -40,6 +41,11 @@ uint32_t SuperBlob::getNumBlobs()
 std::vector<struct subblob> SuperBlob::getSubBlobs()
 {
 	return subblobs;
+}
+
+uint32_t SuperBlob::getRealOffset()
+{
+    return realOffset;
 }
 
 CodeDirectoryBlob::CodeDirectoryBlob()
