@@ -825,3 +825,169 @@ bool MachO::performSHA(FILE *file, uint32_t inputOffset, uint32_t hashSize,
 
     return true;
 }
+
+bool MachO::isInfoPlistValid()
+{
+    CodeDirectoryBlob cdb;
+    std::vector<char*> hashes;
+    uint32_t hashSize = 0;
+    Section *info_plist = nullptr;
+    unsigned char *resultingSHA = nullptr;
+
+    cdb = getCodeDirectoryBlob();
+    hashes = cdb.getHashes();
+    hashSize = cdb.getHashSize();
+
+    info_plist = getSectionByName((char*)"__TEXT", (char*)"__info_plist");
+    if (info_plist) {
+        performSHA(file, info_plist->getRealOffset(), hashSize, info_plist->getSize(), &resultingSHA);
+
+        for (int i = 0; i < hashSize; i++)
+            if ((unsigned char)hashes[SPECIAL_SIG_INFOPLIST][i] != resultingSHA[i]) {
+                printf("Info plist hash mismatch at %d!\n", i);
+                delete resultingSHA;
+
+                return false;
+            }
+    }
+
+    delete resultingSHA;
+
+    return true;
+}
+
+bool MachO::isRequirementSetValid()
+{
+    CodeDirectoryBlob cdb;
+    std::vector<char*> hashes;
+    uint32_t hashSize = 0;
+    SuperBlob sb;
+	std::vector<struct subblob> sbs;
+    RequirementSet rs;
+    bool isOK = false;
+    unsigned char *resultingSHA = nullptr;
+
+    cdb = getCodeDirectoryBlob();
+    hashes = cdb.getHashes();
+    hashSize = cdb.getHashSize();
+
+    sb = getSuperBlob();
+	sbs = sb.getSubBlobs();
+	for (unsigned int i = 0; i < sbs.size(); i++) {
+		if (sbs[i].type == REQUIREMENTS) {
+            rs = RequirementSet(file, sb.getRealOffset() + sbs[i].offset);
+            isOK = true;
+        }
+    }
+
+    if (isOK) {
+        performSHA(file, rs.getRealOffset(), hashSize, rs.getLength(), &resultingSHA);
+
+        for (int i = 0; i < hashSize; i++)
+            if ((unsigned char)hashes[SPECIAL_SIG_REQUIREMENTS][i] != resultingSHA[i]) {
+                printf("Requirements hash mismatch at %d!\n", i);
+                delete resultingSHA;
+
+                return false;
+            }
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
+bool MachO::areEntitlementsValid()
+{
+    CodeDirectoryBlob cdb;
+    std::vector<char*> hashes;
+    uint32_t hashSize = 0;
+	SuperBlob sb;
+	std::vector<struct subblob> sbs;
+    unsigned char *resultingSHA = nullptr;
+    uint32_t entitlementsRealOffset = 0;
+    uint32_t entitlementsMagic = 0;
+    uint32_t entitlementsSize = 0;
+
+    cdb = getCodeDirectoryBlob();
+    hashes = cdb.getHashes();
+    hashSize = cdb.getHashSize();
+
+	sb = getSuperBlob();
+	sbs = sb.getSubBlobs();
+
+	/* find entitlements blob */
+	for (unsigned int i = 0; i < sbs.size(); i++) {
+		if (sbs[i].type == ENTITLEMENTS_VALUE) {
+            entitlementsRealOffset = sbs[i].offset;
+        }
+    }
+
+    if (entitlementsRealOffset != 0) {
+        fseek(file, codeSignatureCmd.getDataRealOffset() + entitlementsRealOffset, SEEK_SET);
+        FileUtils::readNetworkUint32(file, &entitlementsMagic);
+        FileUtils::readNetworkUint32(file, &entitlementsSize);
+
+        if (entitlementsMagic != CSMAGIC_ENTITLEMENTS_BLOB)
+            throw std::runtime_error("Entitlements magic does not match!\n");
+
+        performSHA(file, codeSignatureCmd.getDataRealOffset() + entitlementsRealOffset,
+                   hashSize, entitlementsSize, &resultingSHA);
+
+        for (int i = 0; i < hashSize; i++)
+            if ((unsigned char)hashes[SPECIAL_SIG_ENTITLEMENTS][i] != resultingSHA[i]) {
+                printf("Entitlements hash mismatch at %d!\n", i);
+                delete resultingSHA;
+
+                return false;
+            }
+    } else {
+        return false;
+    }
+
+    return true;
+}
+
+bool MachO::isSpecialSignatureValid(uint32_t slot_index)
+{
+    bool ret = false;
+
+    switch (slot_index) {
+        case SPECIAL_SIG_INFOPLIST:
+            ret = isInfoPlistValid();
+            break;
+        case SPECIAL_SIG_REQUIREMENTS:
+            ret = isRequirementSetValid();
+            break;
+        case SPECIAL_SIG_ENTITLEMENTS:
+            ret = areEntitlementsValid();
+            break;
+        // TODO: implement for Resource Directory and Application Specific
+        // signatures
+        default:
+            printf("No special signature with slot %d!\n", slot_index);
+            ret = true;
+            break;
+    }
+
+    return ret;
+}
+
+bool MachO::areSpecialSignaturesValid()
+{
+    bool allValid = true;
+    bool currentValidity = false;
+    CodeDirectoryBlob cdb;
+
+    cdb = getCodeDirectoryBlob();
+
+    for (int i = 0; i < cdb.getNSpecialSlots(); i++) {
+        currentValidity = isSpecialSignatureValid(i);
+        if (!currentValidity)
+            allValid = false;
+
+        hashValidities.push_back(currentValidity);
+    }
+
+    return allValid;
+}
