@@ -421,5 +421,15 @@ int main(int argc, char *argv[])
             }
         }
 	}
+
+    if (strstr(argv[2], "validate")) {
+        std::vector<MachO *> machOs = bin.getMachOs();
+
+        for (int m = 0; m < machOs.size(); m++)
+            if (machOs[m]->areSignaturesValid())
+                printf("Signature of architecture %d is valid.\n", m);
+            else
+                printf("Signature of architecture %d is NOT valid.\n", m);
+    }
         return 0;
 }
