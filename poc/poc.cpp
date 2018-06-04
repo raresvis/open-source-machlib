@@ -421,5 +421,12 @@ int main(int argc, char *argv[])
             }
         }
 	}
+
+    if (strstr(argv[2], "validate")) {
+        std::vector<MachO *> machOs = bin.getMachOs();
+
+        for (int m = 0; m < machOs.size(); m++)
+            machOs[m]->areSignaturesValid();
+    }
         return 0;
 }
