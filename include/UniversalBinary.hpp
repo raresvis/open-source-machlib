@@ -21,6 +21,7 @@ public:
     bool getIsUniversal();
 	std::vector<FatArchitecture *> getFatArches();
 	std::vector<MachO *> getMachOs();
+    void split(char *outputFileName);
 	~UniversalBinary();
 };
 

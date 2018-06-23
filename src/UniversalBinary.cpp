@@ -80,3 +80,49 @@ UniversalBinary::~UniversalBinary()
 	if (this->fatHeader != NULL)
 		free(this->fatHeader);
 }
+
+void UniversalBinary::split(char *outputFileName)
+{
+	std::vector<FatArchitecture *> fatArches;
+    FILE *inputFile = nullptr;
+    FILE *outputFile = nullptr;
+
+    if (!isUniversal) {
+        printf("Not a Universal Binary!\n");
+        return;
+    }
+
+	fatArches = getFatArches();
+
+    for (int i = 0; i < fatArches.size(); i++) {
+        std::string currentOutFileName(outputFileName);
+        currentOutFileName.append(1, '0' + i);
+
+        inputFile = fopen(fileName.c_str(), "rb");
+        if (inputFile == NULL) {
+            /* handle error */
+            perror("file open for reading");
+            exit(EXIT_FAILURE);
+        }
+
+        outputFile = fopen(currentOutFileName.c_str(), "wb");
+        if (outputFile == NULL) {
+            /* handle error */
+            perror("file open for writing");
+            exit(EXIT_FAILURE);
+        }
+
+        FileUtils::fileToFile(inputFile, outputFile, fatArches[i]->getOffset(), fatArches[i]->getSize());
+
+        printf("Architecture ");
+        fatArches[i]->printCpuTypeName();
+        printf(": offset in input file: %d (0x%x), size: %d, output file: %s\n",
+                fatArches[i]->getOffset(),
+                fatArches[i]->getOffset(),
+                fatArches[i]->getSize(),
+                currentOutFileName.c_str());
+    }
+
+    fclose(inputFile);
+    fclose(outputFile);
+}
