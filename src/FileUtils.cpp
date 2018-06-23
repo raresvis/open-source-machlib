@@ -13,6 +13,14 @@ void FileUtils::readUint32(FILE *file, uint32_t *buff)
                 *buff = swapUint32(*buff);
 }
 
+void FileUtils::writeUint32(FILE *file, uint32_t buff)
+{
+    if (isSwap)
+        buff = swapUint32(buff);
+
+    fwrite(&buff, sizeof(uint32_t), 1, file);
+}
+
 void FileUtils::readNetworkUint32(FILE *file, uint32_t *buff)
 {
 	uint32_t rc;
@@ -24,6 +32,12 @@ void FileUtils::readNetworkUint32(FILE *file, uint32_t *buff)
 	*buff = ntohl(buf);
 }
 
+void FileUtils::writeNetworkUint32(FILE *file, uint32_t buff)
+{
+    buff = htonl(buff);
+
+    fwrite(&buff, sizeof(uint32_t), 1, file);
+}
 
 void FileUtils::readUint64(FILE *file, uint64_t *buff)
 {
@@ -36,6 +50,22 @@ void FileUtils::readUint64(FILE *file, uint64_t *buff)
                 *buff = swapUint64(*buff);
 }
 
+void FileUtils::writeNetworkUint64(FILE *file, uint64_t buff)
+{
+    int endianessCheck = 1;
+    uint64_t buf = 0;
+
+    buf = buff;
+    if (*(char *)&endianessCheck != 1) {
+        // If true, architecture is big endian so swap bytes
+        buf = (buf & 0x00000000FFFFFFFF) << 32 | (buf & 0xFFFFFFFF00000000) >> 32;
+        buf = (buf & 0x0000FFFF0000FFFF) << 16 | (buf & 0xFFFF0000FFFF0000) >> 16;
+        buf = (buf & 0x00FF00FF00FF00FF) << 8  | (buf & 0xFF00FF00FF00FF00) >> 8;
+    }
+
+    fwrite(&buf, sizeof(uint64_t), 1, file);
+}
+
 void FileUtils::readUint8(FILE *file, uint8_t *buff)
 {
         uint32_t rc;
@@ -44,6 +74,11 @@ void FileUtils::readUint8(FILE *file, uint8_t *buff)
         if (rc != 1)
                 throw std::runtime_error("File Read8 Fail");
 
+}
+
+void FileUtils::writeUint8(FILE *file, uint8_t buff)
+{
+    fwrite(&buff, sizeof(uint8_t), 1, file);
 }
 
 void FileUtils::readUint16(FILE *file, uint16_t *buff)
@@ -68,6 +103,12 @@ void FileUtils::readBytes(FILE *file, char *buff, int nr)
         if (isSwap)
                 swapBytes(buff, nr);
 
+}
+
+void FileUtils::writeBytes(FILE *file, char *buff, int nr)
+{
+    //TODO: if needed, treat the swap case like readBytes() does
+    fwrite(buff, sizeof(char), nr, file);
 }
 
 void FileUtils::setSwap()

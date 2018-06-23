@@ -15,11 +15,16 @@ private:
         static void swapBytes(char *buff, int size);
 public:
         static void readUint32(FILE *file, uint32_t * buff);
+        static void writeUint32(FILE *file, uint32_t buff);
         static void readNetworkUint32(FILE *file, uint32_t * buff);
+        static void writeNetworkUint32(FILE *file, uint32_t buff);
         static void readUint64(FILE *file, uint64_t * buff);
+        static void writeNetworkUint64(FILE *file, uint64_t buff);
         static void readUint8(FILE *file, uint8_t * buff);
+        static void writeUint8(FILE *file, uint8_t buff);
         static void readUint16(FILE *file, uint16_t * buff);
         static void readBytes(FILE *file, char * buff, int nr);
+        static void writeBytes(FILE *file, char * buff, int nr);
         static void setSwap();
         static void clearSwap();
 };
