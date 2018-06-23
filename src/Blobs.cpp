@@ -2,9 +2,12 @@
 
 SuperBlob::SuperBlob()
 {
+    isConstructMode = true;
+    areBlobsSet = false;
 }
 
 SuperBlob::SuperBlob(FILE *file, LinkEditCmd sigCmd)
+    : isConstructMode(false), areBlobsSet(false)
 {
 	struct subblob sb;
 	uint32_t buf;
@@ -46,6 +49,40 @@ std::vector<struct subblob> SuperBlob::getSubBlobs()
 uint32_t SuperBlob::getRealOffset()
 {
     return realOffset;
+}
+
+void SuperBlob::setBlobs(std::vector<uint32_t> types, std::vector<uint32_t> sizes)
+{
+    uint32_t currentOffset = 0;
+
+    if (types.size() != sizes.size()) {
+        printf("Size mismatch!\n");
+        exit(1);
+    }
+
+    this->types = types;
+
+    currentOffset = 3 * sizeof(uint32_t) + types.size() * 2 * sizeof(uint32_t);
+
+    for (int i = 0; i < types.size(); i++) {
+        offsets.push_back(currentOffset);
+        currentOffset += sizes[i];
+    }
+
+    this->length = currentOffset;
+    this->numBlobs = types.size();
+}
+
+void SuperBlob::serialize(FILE *file)
+{
+    FileUtils::writeNetworkUint32(file, CSMAGIC_EMBEDDED_SIGNATURE);
+    FileUtils::writeNetworkUint32(file, length);
+    FileUtils::writeNetworkUint32(file, numBlobs);
+
+    for (int i = 0; i < types.size(); i++) {
+        FileUtils::writeNetworkUint32(file, types[i]);
+        FileUtils::writeNetworkUint32(file, offsets[i]);
+    }
 }
 
 CodeDirectoryBlob::CodeDirectoryBlob()

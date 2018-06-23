@@ -14,8 +14,11 @@
 #define CSMAGIC_REQUIREMENT_BLOB	0xFADE0C00 //NOT USED
 #define CSMAGIC_ENTITLEMENTS_BLOB	0xFADE7171
 
-#define CODE_DIRECTORY_BLOB		0x0
-#define REQUIREMENTS	    	0x2
+#define CODE_DIRECTORY_BLOB     0x00000
+#define REQUIREMENTS            0x00002
+#define ENTITLEMENTS            0x00005
+#define CMS_BLOB                0x10000
+#define IDENTIFICATION          0x10001 //NOT USED
 
 #define CODE_DIRECTORY_BLOB_VERSION0 0x20001
 #define CODE_DIRECTORY_BLOB_VERSION1 0x20100
@@ -36,6 +39,12 @@ private:
 	std::vector<struct subblob> subblobs;
 
     uint32_t realOffset;
+
+    bool isConstructMode;
+    bool areBlobsSet;
+    std::vector<uint32_t> types;
+    std::vector<uint32_t> offsets;
+
 public:
 	SuperBlob(FILE *file, LinkEditCmd sigCmd);
 	SuperBlob();
@@ -44,6 +53,10 @@ public:
 	std::vector<struct subblob> getSubBlobs();
 	
     uint32_t getRealOffset();
+
+    void setBlobs(std::vector<uint32_t> types, std::vector<uint32_t> sizes);
+
+    void serialize(FILE *file);
 };
 
 class CodeDirectoryBlob
