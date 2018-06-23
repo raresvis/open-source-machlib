@@ -41,6 +41,34 @@ uint32_t FatArchitecture::getAlign()
 	return this->align;
 }
 
+void FatArchitecture::printCpuTypeName()
+{
+    uint32_t extractedCpu = 0;
+
+    extractedCpu = getCpuType();
+
+    switch(extractedCpu){
+        case CPU_TYPE_X86:
+            printf("X86");
+            break;
+        case CPU_TYPE_X86_64:
+            printf("X86_64");
+            break;
+        case CPU_TYPE_ARM:
+            printf("ARM");
+            break;
+        case CPU_TYPE_ARM64:
+            printf("ARM64");
+            break;
+        case CPU_TYPE_POWERPC:
+            printf("POWERPC");
+            break;
+        case CPU_TYPE_POWERPC64:
+            printf("POWERPC64");
+            break;
+    }
+}
+
 void FatArchitecture::print()
 {
     printf("cputype: 0x%x, cpusubtype: 0x%x, offset: %u, size: %u, align: 2 ^ %u",

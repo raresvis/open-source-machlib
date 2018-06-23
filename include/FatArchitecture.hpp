@@ -20,6 +20,7 @@ public:
 	uint32_t getOffset();
 	uint32_t getSize();
 	uint32_t getAlign();
+    void printCpuTypeName();
     void print();
 	~FatArchitecture();
 };
