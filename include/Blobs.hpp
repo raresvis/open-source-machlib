@@ -90,6 +90,13 @@ private:
 	std::vector<struct subblob> subblobs;
 
     uint32_t realOffset;
+
+    // Applicable only if isConstructMode is true
+    bool isConstructMode;
+    bool isLengthSet;
+    bool isNumBlobsSet;
+
+    void autoSetLength();
 public:
     RequirementSet(FILE *file, uint32_t realOffset);
     RequirementSet();
@@ -97,6 +104,10 @@ public:
 	uint32_t getNumBlobs();
 	uint32_t getRealOffset();
 	std::vector<struct subblob> getSubBlobs();
+
+    void setNumBlobs(uint32_t numBlobs);
+
+    void serialize(FILE *file);
 };
 
 #endif

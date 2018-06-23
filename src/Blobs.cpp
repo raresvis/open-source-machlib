@@ -192,6 +192,7 @@ std::vector<char *>
 
 
 RequirementSet::RequirementSet(FILE *file, uint32_t realOffset)
+    : isConstructMode(false)
 {
     uint32_t magic = 0;
 	struct subblob sb;
@@ -211,14 +212,26 @@ RequirementSet::RequirementSet(FILE *file, uint32_t realOffset)
 		FileUtils::readNetworkUint32(file, &sb.offset);
 		subblobs.push_back(sb);
 	}
+
+    // Applicable only if isConstructMode is true
+    isLengthSet = false;
+    isNumBlobsSet = false;;
 }
 
 RequirementSet::RequirementSet()
 {
+    isConstructMode = true;
+    isLengthSet = false;
+    isNumBlobsSet = false;;
 }
 
 uint32_t RequirementSet::getLength()
 {
+    if (isConstructMode && !isLengthSet) {
+        printf("Length is not set in construct mode!\n");
+        exit(1);
+    }
+
     return length;
 }
 
@@ -237,3 +250,31 @@ std::vector<struct subblob> RequirementSet::getSubBlobs()
     return subblobs;
 }
 
+void RequirementSet::autoSetLength()
+{
+    if (!isNumBlobsSet) {
+        printf("Not all parameters have been set!\n");
+        return;
+    }
+
+    // TODO: So far, the RequirementSet has minumum functionality, it does not
+    // support RequirementBlob additions. So the length is set to accomodate
+    // only for the magic number, length and numBlobs fields.
+    this->length = 3 * sizeof(uint32_t);
+    isLengthSet = true;
+}
+
+void RequirementSet::setNumBlobs(uint32_t numBlobs)
+{
+    this->numBlobs = numBlobs;
+    isNumBlobsSet = true;
+
+    autoSetLength();
+}
+
+void RequirementSet::serialize(FILE *file)
+{
+    FileUtils::writeNetworkUint32(file, CSMAGIC_REQUIREMENT_SET);
+    FileUtils::writeNetworkUint32(file, length);
+    FileUtils::writeNetworkUint32(file, numBlobs);
+}
