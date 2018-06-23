@@ -4,6 +4,9 @@
 MachO::MachO(char *fileName, long int offset)
 {
         uint32_t command, index, size;
+        uint32_t readOffset = 0;
+        Segment *currentSegment = nullptr;
+        linkeditCmdOffset = 0;
 
         this->fileName = fileName;
 
@@ -30,11 +33,23 @@ MachO::MachO(char *fileName, long int offset)
                 switch(command) {
 
                         case LC_SEGMENT32:
-                                segments.push_back(new Segment32(file, offset));
+                                readOffset = ftell(file);
+                                currentSegment = new Segment32(file, offset);
+                                segments.push_back(currentSegment);
+                                if (strcmp (currentSegment->getName(), "__LINKEDIT") == 0)
+                                    linkeditCmdOffset = readOffset - sizeof(uint32_t);
+                                isLinkedit32 = true;
+
                                 break;
 
                         case LC_SEGMENT64:
-                                segments.push_back(new Segment64(file, offset));
+                                readOffset = ftell(file);
+                                currentSegment = new Segment64(file, offset);
+                                segments.push_back(currentSegment);
+                                if (strcmp (currentSegment->getName(), "__LINKEDIT") == 0)
+                                    linkeditCmdOffset = readOffset - sizeof(uint32_t);
+                                isLinkedit32 = false;
+
                                 break;
 
                         case LC_SYMTAB:
@@ -87,8 +102,6 @@ MachO::MachO(char *fileName, long int offset)
         functionsOffsetComputed = false;
         kextsInfoComputed = false;
         DynamicSymbolTableComputed = false;
-
-
 }
 
 MachHeader MachO::getHeader()
@@ -994,7 +1007,6 @@ bool MachO::areSpecialSignaturesValid()
 
 void MachO::performCodeHash(FILE *inputFile, uint32_t slot_index, uint32_t pageSize, uint32_t codeLimit, uint32_t hashSize, unsigned char **output)
 {
-    FILE *hashedFile = NULL;
     uint32_t hashedSize  = 0;
 
     if (!inputFile)
@@ -1080,4 +1092,291 @@ bool MachO::areCodeSignaturesValid()
 bool MachO::areSignaturesValid()
 {
     return  areSpecialSignaturesValid() && areCodeSignaturesValid();
+}
+
+uint32_t MachO::computeFileSize(FILE *file)
+{
+    FILE *f = nullptr;
+    uint32_t fileSize;
+
+    f = fopen(fileName, "r");
+    fseek(f, 0, SEEK_END);
+    fileSize = ftell(f);
+    fclose(f);
+
+    return fileSize;
+}
+
+bool MachO::hasInfoPlist()
+{
+    return getSectionByName((char*)"__TEXT", (char*)"__info_plist")
+        ? true : false;
+}
+
+uint32_t MachO::computeNrCodeSlots(uint32_t fileSize, uint32_t pageSize)
+{
+    uint32_t nrCodeSlots = 0;
+    
+    nrCodeSlots = fileSize / pageSize;
+    if (fileSize % pageSize)
+        nrCodeSlots++;
+
+    return nrCodeSlots;
+}
+
+uint32_t MachO::computeNrSpecialSlots(bool hasInfoPlist,
+                                      bool hasRequirements,
+                                      bool hasResourceDirectory,
+                                      bool hasApplicationSpecific,
+                                      bool hasEntitlements)
+{
+    if (hasEntitlements)
+        return 5;
+    else if (hasApplicationSpecific)
+        return 4;
+    else if (hasResourceDirectory)
+        return 3;
+    else if (hasRequirements)
+        return 2;
+    else if (hasInfoPlist)
+        return 1;
+    else
+        return 0;
+}
+
+void MachO::patchLinkeditLoadCommand(FILE *outputFile,
+                                     uint32_t pageSize, SuperBlob newsb)
+{
+    uint32_t seekStep = 0;
+    Segment *linkeditSeg = nullptr;
+
+    // linkeditCmdOffset is the offset where the linkedit command (that is to
+    // be edited) starts
+    fseek(outputFile, linkeditCmdOffset, SEEK_SET);
+    // Skip the cmd, cmdsize and segname[16] of struct segment_command
+    fseek(outputFile, 2 * sizeof(uint32_t) + 16 * sizeof(char), SEEK_CUR);
+
+    seekStep = sizeof(uint32_t);
+    if (!isLinkedit32)
+        seekStep = sizeof(uint64_t);
+
+    // Skip vmaddr of struct segment_command
+    fseek(outputFile, seekStep, SEEK_CUR);
+
+    linkeditSeg = getSegmentByName((char *)"__LINKEDIT");
+    if (!linkeditSeg) {
+        printf("No LINKEDIT segment found!\n");
+        exit(1);
+    }
+
+    if (isLinkedit32)
+        FileUtils::writeNetworkUint32(outputFile, linkeditSeg->getVirtualSize() + pageSize);
+    else
+        FileUtils::writeNetworkUint64(outputFile, linkeditSeg->getVirtualSize() + pageSize);
+
+    // Skip fileoff of struct segment_command
+    fseek(outputFile, seekStep, SEEK_CUR);
+
+    //printf("writing %x = %d at addr %x\n", linkeditSeg->getFileSize() + newsb.getLength(), linkeditSeg->getFileSize() + newsb.getLength(), ftell(outputFile));
+
+    if (isLinkedit32)
+        FileUtils::writeNetworkUint32(outputFile, linkeditSeg->getFileSize() + newsb.getLength());
+    else
+        FileUtils::writeNetworkUint64(outputFile, linkeditSeg->getFileSize() + newsb.getLength());
+}
+
+std::vector<char *> MachO::computeHashes(char *fileName, uint32_t nrSpecialSlots, uint32_t nrCodeSlots, uint8_t hashType, uint32_t codeLimit, uint32_t pageSize)
+{
+    FILE *exein = nullptr;
+    uint32_t hashSize = 0;
+    std::vector<char *> codeDirectoryBlobHashes;
+
+    exein = fopen(fileName, "rb");
+    if (exein == NULL) {
+        /* handle error */
+        perror("file open for reading");
+        exit(EXIT_FAILURE);
+    }
+
+    // Construct hashes
+    hashSize = hashType == HASHTYPE_SHA256 ? HASHSIZE_SHA256 : HASHSIZE_SHA1;
+    for (uint32_t i = 0; i < nrSpecialSlots; i++) {
+        char *currentSpecialHash = new char[hashSize]();
+        // TODO: compute special hash
+        codeDirectoryBlobHashes.push_back(currentSpecialHash);
+    }
+    for (uint32_t i = 0; i < nrCodeSlots; i++) {
+        unsigned char *currentCodeHash = new unsigned char[hashSize]();
+        performCodeHash(exein, i, pageSize, codeLimit, hashSize, &currentCodeHash);
+        codeDirectoryBlobHashes.push_back((char *)currentCodeHash);
+    }
+
+    return codeDirectoryBlobHashes;
+}
+
+void MachO::sign(char *outputFileName, uint32_t pageSizeLog, uint8_t hashType, char *identityString)
+{
+    uint64_t fileSize = 0;
+    uint64_t codeSignatureOffset = 0;
+    uint32_t firstSectionOffset = 0;    
+    bool foundSection = false;
+    uint32_t newLoadCommandOffset = 0;
+
+    if (codeSignatureCmdPresent) {
+        printf("Already Signed! Resigning not yet supported!\n");
+        return;
+    }
+   
+    // Get the size of the file, so that we know a rough estimation of the
+    // offset where the code signature begins.
+    fileSize = computeFileSize(file);
+
+    // Align the address to 16 bytes and get the starting address of the code
+    // signature
+    if (fileSize % 16 != 0)
+        codeSignatureOffset = fileSize + (16 - fileSize % 16);
+    else
+        codeSignatureOffset = fileSize;
+
+    // Set signatures that will be contained in the signature
+    bool hasInfoPlist = this->hasInfoPlist();
+    bool hasRequirements = true; //Default option
+    bool hasResourceDirectory = false;
+    bool hasApplicationSpecific = false;
+    bool hasEntitlements = false;
+
+    // Compute the number of code slots needed
+    uint32_t pageSize = 1 << pageSizeLog;
+    uint32_t nrCodeSlots = computeNrCodeSlots(fileSize, pageSize);
+
+    // Compute the number of special slots needed
+    uint32_t nrSpecialSlots = computeNrSpecialSlots(hasInfoPlist, hasRequirements,
+                                hasResourceDirectory, hasApplicationSpecific,
+                                hasEntitlements);
+
+    //printf("filesize: %x, codesignatureoffset: %x\n", fileSize, codeSignatureOffset);
+
+    // Find the address of the first section
+    std::vector<Segment *> segments = getSegments();
+    for(uint32_t i = 0; i < segments.size() && !foundSection; i++) {
+        std::vector<Section *> sections = segments[i]->getSections();
+        for(uint32_t j = 0; j < segments[i]->getNumberSections() && !foundSection; j++) {
+                firstSectionOffset = sections[j]->getOffset();
+                foundSection = true;
+        }
+    }
+
+    //printf("first section offset: %x\n", firstSectionOffset);
+
+    // Compute the starting address of the new load command
+    newLoadCommandOffset =
+        (header.getIs32() ? MACH_HEADER_64_SIZE : MACH_HEADER_64_SIZE)
+        + header.getSizeOfCmds();
+    
+    //printf("new load command offset: %x\n", newLoadCommandOffset);
+
+    // Check if adding a new load command would overwrite the first section
+    if (newLoadCommandOffset + LC_CODE_SIGNATURE_SIZE > codeSignatureOffset) {
+        printf("Adding a new load command overwrites the first segment!\n");
+        return;
+    }
+
+    // Copy the initial binary so that we edit its copy, not the
+    // initial one
+    FILE *exein, *exeout;
+    exein = fopen(fileName, "rb");
+    if (exein == NULL) {
+        /* handle error */
+        perror("file open for reading");
+        exit(EXIT_FAILURE);
+    }
+    exeout = fopen(outputFileName, "wb");
+    if (exeout == NULL) {
+        /* handle error */
+        perror("file open for writing");
+        exit(EXIT_FAILURE);
+    }
+    FileUtils::fileToFile(exein, exeout, 0, fileSize);
+    fclose(exein);
+
+    CodeDirectoryBlob newcdb = CodeDirectoryBlob();
+    newcdb.setVersion(CODE_DIRECTORY_BLOB_VERSION1);
+    newcdb.setFlags(CDB_FLAG_ADHOC);
+    newcdb.setNSpecialSlots(nrSpecialSlots);
+    newcdb.setNCodeSlots(nrCodeSlots);
+    newcdb.setCodeLimit(codeSignatureOffset);
+    newcdb.setHashSize(hashType == HASHTYPE_SHA256 ? HASHSIZE_SHA256 : HASHSIZE_SHA1);
+    newcdb.setHashType(hashType);
+    newcdb.setPlatform(0);
+    newcdb.setPageSize(pageSizeLog);
+    newcdb.setSpare2(0);
+    newcdb.setScatterOffset(0);
+    newcdb.setTeamOffset(0);
+    newcdb.setIdentity(identityString);
+
+    RequirementSet newrs = RequirementSet();
+    newrs.setNumBlobs(0);
+
+    //TODO: entitlements blob
+    //////
+
+    std::vector<uint32_t> types;
+    std::vector<uint32_t> sizes;
+
+    types.push_back(CODE_DIRECTORY_BLOB);
+    types.push_back(REQUIREMENTS);
+
+    sizes.push_back(newcdb.getLength());
+    sizes.push_back(newrs.getLength());
+
+    SuperBlob newsb;
+    newsb.setBlobs(types, sizes);
+
+    // Adding the LC_CODE_SIGNATURE increments the number of cmds and the
+    // size of all the load commands
+    uint32_t nrcmds = header.getNumberCmds() + 1;
+    uint32_t newSizeOfCmds = header.getSizeOfCmds() + LC_CODE_SIGNATURE_SIZE;
+
+    // Edit the numberCmds and sizeOfCmds fields in the mach header,
+    // skipping the first part of the header
+    fseek(exeout, 4 * sizeof(uint32_t), SEEK_SET);
+    fwrite(&nrcmds, sizeof(uint32_t), 1, exeout);
+    fwrite(&newSizeOfCmds, sizeof(uint32_t), 1, exeout);
+
+    // Patch the LINKEDIT load command
+    patchLinkeditLoadCommand(exeout, pageSize, newsb);
+
+    // Add the LC_CODE_SIGNATURE load command at the
+    // end of the load commands. use newLoadCommandOffset from above
+    fseek(exeout, newLoadCommandOffset, SEEK_SET);
+    FileUtils::writeUint32(exeout, LC_CODE_SIGNATURE);
+    FileUtils::writeUint32(exeout, LC_CODE_SIGNATURE_SIZE);
+    FileUtils::writeUint32(exeout, codeSignatureOffset);
+    FileUtils::writeUint32(exeout, newsb.getLength());
+
+    // Flush the changes up until this point. This ensures that the changes
+    // are written to disk.
+    fflush(exeout);
+
+    std::vector<char *> codeDirectoryBlobHashes;
+    codeDirectoryBlobHashes =
+        computeHashes(outputFileName,
+                      nrSpecialSlots,
+                      nrCodeSlots,
+                      hashType,
+                      codeSignatureOffset,
+                      pageSize);
+
+    // CDB takes ownership of codeDirectoryBlobHashes and CDB will free the array
+    newcdb.setHashes(codeDirectoryBlobHashes);
+
+    // Serialize the signature
+    fseek(exeout, 0, SEEK_END);
+    newsb.serialize(exeout);
+    newcdb.serialize(exeout);
+    newrs.serialize(exeout);
+
+    // Close the files
+    if (fclose(exeout)) perror("close output file");
+    if (fclose(exein)) perror("close input file");
 }

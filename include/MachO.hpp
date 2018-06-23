@@ -49,6 +49,8 @@
 
 #define NAMEPREFIX              "func_"
 
+#define HASHTYPE_SHA256             0x2
+#define HASHTYPE_SHA1               0x1
 #define HASHSIZE_SHA256             32
 #define HASHSIZE_SHA1               20
 
@@ -57,6 +59,11 @@
 #define SPECIAL_SIG_RESOURCEDIR     2 //NOT USED
 #define SPECIAL_SIG_APPSPECIFIC     1 //NOT USED
 #define SPECIAL_SIG_ENTITLEMENTS    0
+
+#define MACH_HEADER_SIZE            28
+#define MACH_HEADER_64_SIZE         32
+
+#define LC_CODE_SIGNATURE_SIZE      16 // sizeof(struct linkedit_data_command)
 
 
 struct myKextComp {
@@ -148,6 +155,9 @@ private:
 
     std::vector<bool> hashValidities;
 
+    uint32_t linkeditCmdOffset;
+    bool isLinkedit32;
+
     bool performSHA1(unsigned char *input, uint32_t inputSize, unsigned char *output);
     bool performSHA256(unsigned char *input, uint32_t inputSize, unsigned char *output);
     bool performSHA(FILE *file, uint32_t inputOffset, uint32_t hashSize,
@@ -163,6 +173,16 @@ private:
     void performCodeHash(FILE *inputFile, uint32_t slot_index, uint32_t pageSize, uint32_t codeLimit, uint32_t hashSize, unsigned char **output);
     bool isCodeSignatureValid(uint32_t slot_index);
     bool areCodeSignaturesValid();
+
+    uint32_t computeFileSize(FILE *file);
+    uint32_t computeNrCodeSlots(uint32_t fileSize, uint32_t pageSize);
+    uint32_t computeNrSpecialSlots(bool hasInfoPlist, bool hasRequirements,
+                                   bool hasResourceDirectory, bool hasApplicationSpecific,
+                                   bool hasEntitlements);
+    std::vector<char *> computeHashes(char *fileName, uint32_t nrSpecialSlots, uint32_t nrCodeSlots, uint8_t hashType, uint32_t codeLimit, uint32_t pageSize);
+    bool hasInfoPlist();
+
+    void patchLinkeditLoadCommand(FILE *file, uint32_t pageSize, SuperBlob newsb);
 
 public:
         MachO(char *fileName, long int offset);
@@ -217,6 +237,7 @@ public:
 	Entitlements getEntitlements();
 
     bool areSignaturesValid();
+    void sign(char *outputFileName, uint32_t pageSizeLog, uint8_t hashType, char *identityString);
 
         ~MachO();
 };
