@@ -422,6 +422,21 @@ int main(int argc, char *argv[])
         }
 	}
 
+    if (strstr(argv[2], "arches")) {
+        if (!bin.getIsUniversal()) {
+            printf("Not a Universal Binary !\n");
+            return 0;
+        }
+
+	    std::vector<FatArchitecture *> fatArches = bin.getFatArches();
+
+        printf("Universal Binary architectures:\n");
+        for (int m = 0; m < fatArches.size(); m++) {
+            fatArches[m]->printCpuTypeName();
+            printf("\n");
+        }
+    }
+
     if (strstr(argv[2], "validate")) {
         std::vector<MachO *> machOs = bin.getMachOs();
 
