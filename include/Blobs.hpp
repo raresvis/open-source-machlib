@@ -17,6 +17,12 @@
 #define CODE_DIRECTORY_BLOB		0x0
 #define REQUIREMENTS	    	0x2
 
+#define CODE_DIRECTORY_BLOB_VERSION0 0x20001
+#define CODE_DIRECTORY_BLOB_VERSION1 0x20100
+#define CODE_DIRECTORY_BLOB_VERSION2 0x20200
+
+#define CDB_FLAG_ADHOC 0x0002
+
 struct subblob {
 	uint32_t type;
 	uint32_t offset;
@@ -43,6 +49,7 @@ public:
 class CodeDirectoryBlob
 {
 private:
+    bool isConstructMode;
 	uint32_t length;
 	uint32_t version;
 	uint32_t flags;
@@ -59,9 +66,36 @@ private:
 	uint32_t scatterOffset;
 	uint32_t teamOffset;
 	std::vector<char *> hashes;
+
+    char *hashesBuffer;
+
+    // Applicable only if isConstructMode is true
+    bool isLengthSet;
+    bool isVersionSet;
+    bool areFlagsSet;
+    bool isHashOffsetSet;
+    bool isIdentOffsetSet;
+    bool isSpecialSlotsNrSet;
+    bool isCodeSlotsNrSet;
+    bool isCodeLimitSet;
+    bool isHashSizeSet;
+    bool isHashTypeSet;
+    bool isPlatformSet;
+    bool isPageSizeSet;
+    bool isSpare2Set;
+    bool isScatterOffsetSet;
+    bool isTeamOffsetSet;
+    char *identity;
+    bool isIdentitySet;
+    bool areHashesSet;
+
+    void autoSetLength();
+    void autoSetHashOffset();
+    void autoSetIdentOffset();
 public:
 	CodeDirectoryBlob(FILE *file, LinkEditCmd sigCmd, SuperBlob sb);
 	CodeDirectoryBlob();
+	~CodeDirectoryBlob();
 	uint32_t getLength();
 	uint32_t getVersion();
 	uint32_t getFlags();
@@ -79,6 +113,24 @@ public:
 	uint32_t getTeamOffset();
 	std::vector<char *> getHashes();
 
+    // Applicable only if isConstructMode is true
+    void setVersion(uint32_t version);
+    void setFlags(uint32_t flags);
+    void setNSpecialSlots(uint32_t nSpecialSlots);
+    void setNCodeSlots(uint32_t nCodeSlots);
+    void setCodeLimit(uint32_t codeLimit);
+    void setHashSize(uint8_t hashSize);
+    void setHashType(uint8_t hashType);
+    void setPlatform(uint8_t platform);
+    void setPageSize(uint8_t pageSize);
+    void setSpare2(uint32_t spare2);
+    void setScatterOffset(uint32_t scatterOffset);
+    void setTeamOffset(uint32_t teamOffset);
+
+    void setIdentity(char *identity);
+    void setHashes(std::vector<char *> specialHashes);
+
+    void serialize(FILE *file);
 };
 
 

@@ -50,12 +50,29 @@ uint32_t SuperBlob::getRealOffset()
 
 CodeDirectoryBlob::CodeDirectoryBlob()
 {
+    isConstructMode = true;
+    isLengthSet = false;
+    isVersionSet = false;
+    areFlagsSet = false;
+    isHashOffsetSet = false;
+    isIdentOffsetSet = false;
+    isSpecialSlotsNrSet = false;
+    isCodeSlotsNrSet = false;
+    isCodeLimitSet = false;
+    isHashSizeSet = false;
+    isHashTypeSet = false;
+    isPlatformSet = false;
+    isSpare2Set = false;
+    isScatterOffsetSet = false;
+    isTeamOffsetSet = false;
+    isIdentitySet = false;
+    areHashesSet = false;
 }
 
 CodeDirectoryBlob::CodeDirectoryBlob(FILE *file, LinkEditCmd sigCmd,
-				     SuperBlob sb)
+				     SuperBlob sb) :
+    isConstructMode(false)
 {
-	char *buf;
 	uint32_t magic;
 	uint32_t sbOffset = sigCmd.getDataRealOffset();
 	uint32_t cdbOffset = 0;
@@ -94,23 +111,46 @@ CodeDirectoryBlob::CodeDirectoryBlob(FILE *file, LinkEditCmd sigCmd,
 	/* Read hashes */
 	uint32_t hashesStart = sbOffset + cdbOffset + hashOffset - hashSize * nSpecialSlots;
 	fseek(file, hashesStart, SEEK_SET);
-	buf = (char*) malloc(hashSize * (nSpecialSlots + nCodeSlots));
+	hashesBuffer = (char*) malloc(hashSize * (nSpecialSlots + nCodeSlots));
 	for (uint32_t i = 0; i < nSpecialSlots; i++) {
-		char *cur_buf = buf + i * hashSize;
+		char *cur_buf = hashesBuffer + i * hashSize;
 		FileUtils::readBytes(file, cur_buf, hashSize);
 		hashes.push_back(cur_buf);
 	}
 
 	for (uint32_t i = 0; i < nCodeSlots; i++) {
-		char *cur_buf = buf + i * hashSize + nSpecialSlots * hashSize;
+		char *cur_buf = hashesBuffer + i * hashSize + nSpecialSlots * hashSize;
 		FileUtils::readBytes(file, cur_buf, hashSize);
 		hashes.push_back(cur_buf);
 	}
 	
+    // Applicable only if isConstructMode is true
+    isConstructMode = false;
+    isLengthSet = false;
+    isVersionSet = false;
+    areFlagsSet = false;
+    isHashOffsetSet = false;
+    isIdentOffsetSet = false;
+    isSpecialSlotsNrSet = false;
+    isCodeSlotsNrSet = false;
+    isCodeLimitSet = false;
+    isHashSizeSet = false;
+    isHashTypeSet = false;
+    isPlatformSet = false;
+    isSpare2Set = false;
+    isScatterOffsetSet = false;
+    isTeamOffsetSet = false;
+    isIdentitySet = false;
+    areHashesSet = false;
 }
 
 uint32_t CodeDirectoryBlob::getLength()
 {
+    if (isConstructMode && !isLengthSet) {
+        printf("Length is not set in construct mode!\n");
+        exit(1);
+    }
+
 	return length;
 }
 
@@ -190,6 +230,207 @@ std::vector<char *>
 	return hashes;
 }
 
+void CodeDirectoryBlob::setVersion(uint32_t version)
+{
+    this->version = version;
+    isVersionSet = true;
+
+    if (isConstructMode && isIdentitySet && isSpecialSlotsNrSet
+            && isCodeSlotsNrSet && isHashSizeSet && isHashTypeSet) {
+        autoSetLength();
+        autoSetHashOffset();
+        autoSetIdentOffset();
+    }
+}
+
+void CodeDirectoryBlob::setFlags(uint32_t flags)
+{
+    this->flags = flags;
+    areFlagsSet = true;
+}
+
+void CodeDirectoryBlob::setNSpecialSlots(uint32_t nSpecialSlots)
+{
+    this->nSpecialSlots = nSpecialSlots;
+    isSpecialSlotsNrSet = true;
+
+    if (isConstructMode && isIdentitySet && isCodeSlotsNrSet
+            && isHashSizeSet && isHashTypeSet && isVersionSet) {
+        autoSetLength();
+        autoSetHashOffset();
+        autoSetIdentOffset();
+    }
+}
+
+void CodeDirectoryBlob::setNCodeSlots(uint32_t nCodeSlots)
+{
+    this->nCodeSlots = nCodeSlots;
+    isCodeSlotsNrSet = true;
+
+    if (isConstructMode && isIdentitySet && isSpecialSlotsNrSet
+            && isHashSizeSet && isHashTypeSet && isVersionSet) {
+        autoSetLength();
+        autoSetHashOffset();
+        autoSetIdentOffset();
+    }
+}
+
+void CodeDirectoryBlob::setCodeLimit(uint32_t codeLimit)
+{
+    this->codeLimit = codeLimit;
+    isCodeLimitSet = true;
+}
+
+void CodeDirectoryBlob::setHashSize(uint8_t hashSize)
+{
+    this->hashSize = hashSize;
+    isHashSizeSet = true;
+
+    if (isConstructMode && isIdentitySet && isSpecialSlotsNrSet
+            && isCodeSlotsNrSet && isHashTypeSet && isVersionSet) {
+        autoSetLength();
+        autoSetHashOffset();
+        autoSetIdentOffset();
+    }
+}
+
+void CodeDirectoryBlob::setHashType(uint8_t hashType)
+{
+    this->hashType = hashType;
+    isHashTypeSet = true;
+
+    if (isConstructMode && isIdentitySet && isSpecialSlotsNrSet
+            && isCodeSlotsNrSet && isHashSizeSet && isVersionSet) {
+        autoSetLength();
+        autoSetHashOffset();
+        autoSetIdentOffset();
+    }
+}
+
+void CodeDirectoryBlob::setPlatform(uint8_t platform)
+{
+    this->platform = platform;
+    isPlatformSet = true;
+}
+
+void CodeDirectoryBlob::setPageSize(uint8_t pageSize)
+{
+    this->pageSize = pageSize;
+    isPageSizeSet = true;
+}
+
+void CodeDirectoryBlob::setSpare2(uint32_t spare2)
+{
+    this->spare2 = spare2;
+    isSpare2Set = true;
+}
+
+void CodeDirectoryBlob::setScatterOffset(uint32_t scatterOffset)
+{
+    this->scatterOffset = scatterOffset;
+    isScatterOffsetSet = true;
+}
+
+void CodeDirectoryBlob::setTeamOffset(uint32_t teamOffset)
+{
+    this->teamOffset = teamOffset;
+    isTeamOffsetSet = true;
+}
+
+void CodeDirectoryBlob::autoSetLength()
+{
+    if (!isConstructMode || !isIdentitySet || !isSpecialSlotsNrSet
+            || !isCodeSlotsNrSet || !isHashSizeSet || !isHashTypeSet || !isVersionSet) {
+        printf("Required fields are not all filled!\n");
+        return;
+    }
+
+    if (isVersionSet && (version != CODE_DIRECTORY_BLOB_VERSION1 && version != CODE_DIRECTORY_BLOB_VERSION2)) {
+        printf("Invalid Code Directory Version field %x!\n", version);
+        return;
+    }
+
+    uint32_t codeDirBlobStructureSize = (version == CODE_DIRECTORY_BLOB_VERSION1) ? 48 : 52;
+    // length = sizeof code dir structure + strlen(identity) + null terminator + sizeof hash slots
+    length = codeDirBlobStructureSize + strlen(identity) + 1
+                                + (nSpecialSlots + nCodeSlots) * hashSize;
+
+    isLengthSet = true;
+}
+
+void CodeDirectoryBlob::autoSetHashOffset()
+{
+    if (!isLengthSet) {
+        printf("Length needs to be set before setting the HashOffset!\n");
+        return;
+    }
+
+    uint32_t codeDirBlobStructureSize = (version == CODE_DIRECTORY_BLOB_VERSION1) ? 48 : 56;
+    hashOffset = codeDirBlobStructureSize + strlen(identity) + 1 + nSpecialSlots * hashSize;
+
+    isHashOffsetSet = true;
+}
+
+void CodeDirectoryBlob::autoSetIdentOffset()
+{
+    if (!isLengthSet) {
+        printf("Length needs to be set before setting the HashOffset!\n");
+        return;
+    }
+
+    identOffset = (version == CODE_DIRECTORY_BLOB_VERSION1) ? 48 : 56;
+
+    isIdentOffsetSet = true;
+}
+
+void CodeDirectoryBlob::setIdentity(char *identity)
+{
+    this->identity = identity;
+    isIdentitySet = true;
+
+    if (isConstructMode && isSpecialSlotsNrSet && isCodeSlotsNrSet
+            && isHashSizeSet && isHashTypeSet && isVersionSet) {
+        autoSetLength();
+        autoSetHashOffset();
+        autoSetIdentOffset();
+    }
+}
+
+void CodeDirectoryBlob::setHashes(std::vector<char *> hashes)
+{
+    this->hashes = hashes;
+}
+
+void CodeDirectoryBlob::serialize(FILE *file)
+{
+    FileUtils::writeNetworkUint32(file, CSMAGIC_DIRECTORY_BLOB);
+    FileUtils::writeNetworkUint32(file, length);
+    FileUtils::writeNetworkUint32(file, version);
+    FileUtils::writeNetworkUint32(file, flags);
+    FileUtils::writeNetworkUint32(file, hashOffset);
+    FileUtils::writeNetworkUint32(file, identOffset);
+    FileUtils::writeNetworkUint32(file, nSpecialSlots);
+    FileUtils::writeNetworkUint32(file, nCodeSlots);
+    FileUtils::writeNetworkUint32(file, codeLimit);
+    FileUtils::writeUint8(file, hashSize);
+    FileUtils::writeUint8(file, hashType);
+    FileUtils::writeUint8(file, platform);
+    FileUtils::writeUint8(file, pageSize);
+    FileUtils::writeNetworkUint32(file, spare2);
+    FileUtils::writeNetworkUint32(file, scatterOffset);
+    //FileUtils::writeNetworkUint32(file, teamOffset);
+    FileUtils::writeBytes(file, identity, strlen(identity) + 1);
+
+    for (int i = 0; i < hashes.size(); i++)
+        FileUtils::writeBytes(file, hashes[i], hashSize);
+}
+
+CodeDirectoryBlob::~CodeDirectoryBlob()
+{
+    if (isConstructMode)
+        for (int i = 0; i < hashes.size(); i++)
+            delete hashes[i];
+}
 
 RequirementSet::RequirementSet(FILE *file, uint32_t realOffset)
     : isConstructMode(false)
