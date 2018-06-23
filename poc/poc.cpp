@@ -457,5 +457,9 @@ int main(int argc, char *argv[])
 
         machOs[0]->sign((char *)"out.bin", 12, 2, (char *)"machripperidentity");
     }
+
+    if (strstr(argv[2], "split")) {
+        bin.split((char *)"split");
+    }
         return 0;
 }
