@@ -111,6 +111,36 @@ void FileUtils::writeBytes(FILE *file, char *buff, int nr)
     fwrite(buff, sizeof(char), nr, file);
 }
 
+void FileUtils::fileToFile(FILE *inputFile, FILE *outputFile, uint32_t offset, uint32_t size)
+{
+    size_t toWriteCount, writtenBytesCount, writtenSoFar = 0;
+    bool stop = false;
+    unsigned char buff[4096];
+
+    fseek(inputFile, offset, SEEK_SET);
+
+    do {
+        toWriteCount = fread(buff, 1, sizeof(buff), inputFile);
+
+        if (toWriteCount + writtenSoFar > size) {
+            toWriteCount = size - writtenSoFar;
+            stop = true;
+        }
+
+        if (toWriteCount)
+            writtenBytesCount = fwrite(buff, 1, toWriteCount, outputFile);
+        else
+            writtenBytesCount = 0;
+
+        writtenSoFar += writtenBytesCount;
+    } while ((toWriteCount > 0) && !stop);
+
+    if (writtenSoFar != size) {
+        printf("Cannot copy file!\n");
+        exit(1);
+    }
+}
+
 void FileUtils::setSwap()
 {
         isSwap = true;

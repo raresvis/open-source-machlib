@@ -25,6 +25,7 @@ public:
         static void readUint16(FILE *file, uint16_t * buff);
         static void readBytes(FILE *file, char * buff, int nr);
         static void writeBytes(FILE *file, char * buff, int nr);
+        static void fileToFile(FILE *inputFile, FILE *outputFile, uint32_t offset, uint32_t size);
         static void setSwap();
         static void clearSwap();
 };
