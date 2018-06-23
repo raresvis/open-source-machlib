@@ -1380,3 +1380,28 @@ void MachO::sign(char *outputFileName, uint32_t pageSizeLog, uint8_t hashType, c
     if (fclose(exeout)) perror("close output file");
     if (fclose(exein)) perror("close input file");
 }
+
+
+void MachO::dumpCodeSignature(char *outputFileName)
+{
+	LinkEditCmd codeSignatureCmd;
+    FILE *outputFile = nullptr;
+
+    if (!codeSignatureCmdPresent) {
+        printf("No signature!\n");
+        return;
+    }
+
+    codeSignatureCmd = getCodeSignatureCmd();
+
+    outputFile = fopen(outputFileName, "wb");
+    if (outputFile == NULL) {
+        /* handle error */
+        perror("file open for writing");
+        exit(EXIT_FAILURE);
+    }
+
+    FileUtils::fileToFile(file, outputFile, codeSignatureCmd.getDataRealOffset(), codeSignatureCmd.getDataSize());
+
+    fclose(outputFile);
+}

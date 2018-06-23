@@ -239,6 +239,8 @@ public:
     bool areSignaturesValid();
     void sign(char *outputFileName, uint32_t pageSizeLog, uint8_t hashType, char *identityString);
 
+    void dumpCodeSignature(char *outputFileName);
+
         ~MachO();
 };
 
