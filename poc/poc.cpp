@@ -461,5 +461,16 @@ int main(int argc, char *argv[])
     if (strstr(argv[2], "split")) {
         bin.split((char *)"split");
     }
+
+    if (strstr(argv[2], "dumpsig")) {
+        std::vector<MachO *> machOs = bin.getMachOs();
+
+        for (int m = 0; m < machOs.size(); m++) {
+            std::string currentOutFileName("sigdump");
+            currentOutFileName.append(1, '0' + m);
+
+            machOs[m]->dumpCodeSignature((char *)currentOutFileName.c_str());
+        }
+    }
         return 0;
 }
