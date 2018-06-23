@@ -431,5 +431,16 @@ int main(int argc, char *argv[])
             else
                 printf("Signature of architecture %d is NOT valid.\n", m);
     }
+
+    if (strstr(argv[2], "sign")) {
+        std::vector<MachO *> machOs = bin.getMachOs();
+
+        if (machOs.size() > 1) {
+            printf("fat binary signing not supported yet!\n");
+            return 0;
+        }
+
+        machOs[0]->sign((char *)"out.bin", 12, 2, (char *)"machripperidentity");
+    }
         return 0;
 }
