@@ -3,20 +3,11 @@
 
 #include <capstone/capstone.h>
 #include "MachO.hpp"
+#include "cputypes.h"
 #include <inttypes.h>
 #include <stdexcept>
 #include <algorithm>
 #include <cstring>
-
-#define CPU_ARCH_ABI64                  0x1000000
-
-#define CPU_TYPE_I386                   7
-#define CPU_TYPE_X86_64                 (CPU_TYPE_I386 | CPU_ARCH_ABI64)
-
-
-#define CPU_TYPE_ARM                    12
-#define CPU_TYPE_ARM64                 (CPU_TYPE_ARM | CPU_ARCH_ABI64)
-
 
 
 struct myComp {
